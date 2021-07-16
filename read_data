@@ -120,3 +120,37 @@ for file_name in file_list:
     # assign new column names
     timeseries_df.columns = colnames
     
+    
+    
+    """ stream 2: get grip strength sensor data """
+    # There are timestamps here as well, so get those and the sensor data   
+    
+    # look at the data:
+    # 137 triggers wih matching time stamps
+    # len(data[2]['time_series']) 
+    # len(data[2]['time_stamps'])
+           
+    # Idea: Find all rows where the timestamps match, then add a new column containg the triggers 
+    # at the correct time points and NAs where the timepoints didn't match       
+    
+    # get indices of rows with matching timestamps    
+    indices = timeseries_df.timestamps.loc[data[2]['time_stamps']] # there are no matches?!
+
+
+    # Problem: The EEG and trigger timestamps don't match AT ALL. What is this shit.
+    
+    # EEG timestamps
+    min(timeseries_df.timestamps)
+    max(timeseries_df.timestamps)
+    
+    # experiment trigger timestamps
+    min(data[1]['time_stamps'])
+    max(data[1]['time_stamps'])
+    
+    # gss timestamps
+    min(data[3]['time_stamps'])
+    max(data[3]['time_stamps'])
+
+    # gss timestamps and experiment timestamps are more or less
+    # in the same range, EEG timestamps are way lower?!
+
