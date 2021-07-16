@@ -73,29 +73,12 @@ for file_name in file_list:
     data, header = pyxdf.load_xdf(file_name)
 
     # have a look at every stream in the data:
-    # timestamps??? for what??: stream 0 
+    # nothing?!: stream 0 
     # EEG data & timestamps: stream 1
     # experiment markers: stream 2
     # sensor data: stream 3
           
-
-    
-    """ stream 0: get timestamps  """     
-    # I think the time stamps are in stream 0:
-        # print(data[0]['info']['name'])
-        # data[0]
-
-    # The timestamps are hidden deep in stream 0, in dicts that are themselves nested in lists
-    # I indexed until I got the innermost list of dicts, then turned them into a pandas df:
-    stream_0_df = pd.DataFrame(data[0]['footer']['info'][ 'clock_offsets'][0]['offset'])
-    # The weird thing is that there are only 75 timestamps, have a look:
-    #print(stream_0_df)
-        
-    # For now, I don't care, I have what I think are the timestamps and that's nice. 
-    # Go on with the other data
-        
-    
-
+ 
     """ stream 1: get EEG data for each electrode """    
     
     # look at the data:
