@@ -1,0 +1,122 @@
+# -*- coding: utf-8 -*-
+"""
+
+Analysis for EEG & grip strength sensor (gss) data
+
+Part of Merle's Master Thesis
+Version 1: 16.7.2021
+"""
+
+# -----------------------------------------------------------
+
+""" 1. packages & variables """
+
+# 1.1 import packages
+import os
+
+# Python MNE for eeg data analysis / processing
+#import mne
+
+# for ICA for preproc: 
+#from mne.preprocessing import ICA, create_ecg_epochs, create_eog_epochs
+
+# Install package to read xdf data
+# I spent quite some time figuring this out: 
+# You need to pip install pyxdf before being able to import it. 
+# You can do this by copying one of the following lines into your terminal:
+
+# Option 1: latest stable version (does not work for me)
+# pip install pyxdf
+
+# Option 2 (worked for me): latest developer version
+# pip install git+https://github.com/xdf-modules/pyxdf.git
+# I found this here: https://github.com/xdf-modules/pyxdf
+
+# (The internet says you should install PyPDF2 
+# to be able to import pyxdf, but that doesn't work)
+
+
+
+# Now import package for reading in xdf data:
+import pyxdf
+
+# for plots
+import matplotlib.pyplot as plt
+
+# for random numbers
+import numpy as np
+
+# for getting all files in a directory
+import glob
+
+# import pandas for using dataframes
+import pandas as pd
+
+""" set working directory & get file list """
+
+# working directory
+os.chdir("/Users/merle/Desktop/Masterarbeit/Master_Testdaten/")
+
+# get list of all xdf files in my directory 
+# (the asterix in the path means the name of the 
+# file can be anything as long as it has an .xdf ending)
+file_list = glob.glob("/Users/merle/Desktop/Masterarbeit/Master_Testdaten/*.xdf")
+
+# set number of subjects as number of xdf files in directory
+subj_n = len(file_list)
+
+
+# loop xdf file names in file_list aka participants:
+for file_name in file_list:
+
+    # load xdf file of chosen participant:
+    data, header = pyxdf.load_xdf(file_name)
+
+    # have a look at every stream in the data:
+    # timestamps??? for what??: stream 0 
+    # EEG data & timestamps: stream 1
+    # experiment markers: stream 2
+    # sensor data: stream 3
+          
+
+    
+    """ stream 0: get timestamps  """     
+    # I think the time stamps are in stream 0:
+        # print(data[0]['info']['name'])
+        # data[0]
+
+    # The timestamps are hidden deep in stream 0, in dicts that are themselves nested in lists
+    # I indexed until I got the innermost list of dicts, then turned them into a pandas df:
+    stream_0_df = pd.DataFrame(data[0]['footer']['info'][ 'clock_offsets'][0]['offset'])
+    # The weird thing is that there are only 75 timestamps, have a look:
+    #print(stream_0_df)
+        
+    # For now, I don't care, I have what I think are the timestamps and that's nice. 
+    # Go on with the other data
+        
+    
+
+    """ stream 1: get EEG data for each electrode """    
+    
+    # look at the data:
+    # len(data[1]['time_series'][0])
+    # data[1]['time_stamps']
+    
+    # get timestamps and values from each electrode and convert to pandas df as well 
+    # --> 1 column for each electrode & timestamp (= 128 x 2 =  256 columns)
+    # --> 1 row for each point in time (about 186013 rows)
+    
+    # There's one array with 128 values for each point in time, so first, 
+    # bind all of those arrays together as rows, so we have 1 column for each electrode    
+    timeseries_df = pd.DataFrame(data[1]['time_series'])
+
+    # now add the first column with the time stamps 
+    timeseries_df['timestamp'] = data[1]['time_stamps']
+
+    # create column names (first one is "timestamps", the other ones are the electrode numbers)
+    colnames = ["timestamps"]
+    for i in range(1, len(data[1]['time_series'][0])+1): # range: 1 - 128
+        colnames.append("electrode_" + str(i))
+    # assign new column names
+    timeseries_df.columns = colnames
+    
