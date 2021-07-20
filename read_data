@@ -115,7 +115,16 @@ for file_name in file_list:
     
     # now append grip strength sensor data from stream 3:
     # I have a different sampling rate here so I think I'll interpolate
+    # --> problem: timestamps of EEG data, Psychopy Markers and GSS data don't match!
    
+    # Idea: Create NA array, fill in values at the correct time points, interpolate missing data
+    # I think cubic interpolation is nice for time series data, but not sure. 
+    
+    #pd.DataFrame.interpolate
+    
+    
+    # use this to combine to Raw data object
+    #mne.io.RawArray
    
    
    
