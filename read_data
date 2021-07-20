@@ -4,21 +4,13 @@
 Analysis for EEG & grip strength sensor (gss) data
 
 Part of Merle's Master Thesis
-Version 1: 16.7.2021
+Version 1: 20.7.2021
+
 """
 
 # -----------------------------------------------------------
 
 """ 1. packages & variables """
-
-# 1.1 import packages
-import os
-
-# Python MNE for eeg data analysis / processing
-#import mne
-
-# for ICA for preproc: 
-#from mne.preprocessing import ICA, create_ecg_epochs, create_eog_epochs
 
 # Install package to read xdf data
 # I spent quite some time figuring this out: 
@@ -35,50 +27,89 @@ import os
 # (The internet says you should install PyPDF2 
 # to be able to import pyxdf, but that doesn't work)
 
-
-
 # Now import package for reading in xdf data:
 import pyxdf
 
-# for plots
-import matplotlib.pyplot as plt
 
-# for random numbers
-import numpy as np
+# Python MNE for eeg data analysis / processing
+# put this into your terminal to install python nme
+    # pip install mne
+# NME should be active by default and should already have the 
+# necessary dependencies (numpy, scipy, and matplotlib).    
+import mne
 
-# for getting all files in a directory
+
+# glob for getting all files in a directory
 import glob
 
-# import pandas for using dataframes
+
+# os for setting working directory
+import os
+
+
+# import pandas for using dataframes like I would in R (f*** you python)
 import pandas as pd
 
-""" set working directory & get file list """
 
-# working directory
+
+# --------------------------------------------------------
+
+
+# Set working directory
 os.chdir("/Users/merle/Desktop/Masterarbeit/Master_Testdaten/")
 
-# get list of all xdf files in my directory 
+# Get list of all xdf files in my directory 
 # (the asterix in the path means the name of the 
 # file can be anything as long as it has an .xdf ending)
 file_list = glob.glob("/Users/merle/Desktop/Masterarbeit/Master_Testdaten/*.xdf")
 
-# set number of subjects as number of xdf files in directory
+# Set number of subjects as number of xdf files in directory
 subj_n = len(file_list)
 
-
-# loop xdf file names in file_list aka participants:
+# Loop xdf file names in file_list aka participants:
 for file_name in file_list:
 
+    streams, header = pyxdf.load_xdf(file_name)
+
+    # get time series data from stream 1 (eeg data)?   
+    data = streams[0]["time_series"].T
+
+    # raise error if data has not 3 channels
+    assert data.shape[0] == 3  # 1 EEG, 1 stim channel, 1 gss channel
+
+    data = data[::2]  # just take every other element (take only sensor 1, 3, 5, 7,...) 
+    # --> why only take half of the channels?????
+    # which channels do I need?
+
+    data[:2] *= (1e-6 / 50 / 2)  # transform uV -> V and preamp gain (what does preamp gain mean???)
+    
+    # Create info
+    # Sampling rate: I took the eeg sampling rate, in the tutorial script they took a value from stream 0
+    sfreq = float(streams[1]["info"]["nominal_srate"][0])
+    # create info
+    info = mne.create_info(3, sfreq, ["eeg", "stim", "emg"])
+    # create raw object containing info + data
+    raw = mne.io.RawArray(data, info)
+
+    # Plot data (I took a small excerpt from the start of the experiment)
+    # I can't get this to work! 
+    # Where are the gss data?? Why are the stim markers shown as a line and not as several vertical lines?
+    raw.plot(scalings = 'auto', color = dict(eeg='red', stim='blue', emg = 'black'), duration = 10, start = 1000)
+
+
+    """ Look at the data we just saved in an nme raw object """
+    # The following part was my first approach for reading in the data, 
+    # but I think it's useful to have a look at the structure 
     # load xdf file of chosen participant:
     data, header = pyxdf.load_xdf(file_name)
 
+
     # have a look at every stream in the data:
-    # nothing?!: stream 0 
+    # timestamps??? for what??: stream 0 
     # EEG data & timestamps: stream 1
     # experiment markers: stream 2
     # sensor data: stream 3
-          
- 
+              
     """ stream 1: get EEG data for each electrode """    
     
     # look at the data:
@@ -102,7 +133,6 @@ for file_name in file_list:
         colnames.append("electrode_" + str(i))
     # assign new column names
     timeseries_df.columns = colnames
-    
     
     
     """ stream 2: get grip strength sensor data """
@@ -136,4 +166,7 @@ for file_name in file_list:
 
     # gss timestamps and experiment timestamps are more or less
     # in the same range, EEG timestamps are way lower?!
+
+        
+# END LOOP PARTICIPANTS 
 
