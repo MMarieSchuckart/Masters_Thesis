@@ -72,7 +72,7 @@ for file_name in file_list:
     streams, header = pyxdf.load_xdf(file_name)
 
     # get time series data from stream 1 (eeg data)?   
-    data = streams[0]["time_series"].T
+    data = streams[1]["time_series"].T
 
     # raise error if data has not 3 channels
     assert data.shape[0] == 3  # 1 EEG, 1 stim channel, 1 gss channel
