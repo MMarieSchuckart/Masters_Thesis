@@ -1,4 +1,4 @@
-# Merles Master's Thesis Repo 
+# Merle's Master's Thesis Repo 
 (last updated: August 4th 2021)
 
 This repository is used to collect all the scripts I wrote for my master's thesis.
