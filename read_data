@@ -78,141 +78,145 @@ for file_name in file_list:
 
     
     """ Build NME data object from scratch """
-    # stream 0: general info? actiCHampMarkers
+    # stream 0: general info? actiCHampMarkers (whatever that is)
     # stream 1: Actichamp - EEG data
     # stream 2: PsychoPyMarkers - Experiment markers
     # stream 3: Arduino - Grip strength sensor data    
+
+    # each stream contains timestamps (measured in seconds)
     
     
-    """ Create info for Raw Object"""
-    # Sampling rate: I took the eeg sampling rate, in the tutorial script they took a value from stream 0
-    # but that was 0 in our case???
+    """ Create info for Raw Object for EEG data"""
+    # Sampling rate: 500 Hz
     sampling_freq = float(streams[1]["info"]["nominal_srate"][0]) # in Hertz
+    
     # name and classify channels
-    ch_names = [f'EEG{n:03}' for n in range(1, 129)] + ['GSS']
-    ch_types = ['eeg'] * 128 + ['emg']
-    n_channels = 129
+    ch_names = [f'EEG_{n:03}' for n in range(1, 129)]
+    ch_types = ['eeg'] * 128 
+    n_channels = 126
 
     # combine information 
-    info = mne.create_info(ch_names, ch_types = ch_types, sfreq = sampling_freq)
+    info_eeg = mne.create_info(ch_names, ch_types = ch_types, sfreq = sampling_freq)
     
-    # add dataset name
+    # add name of the curent dataset (I could also add information like age or gender here)
     # (change this if the files names of the exp files are named differently)
-    info['description'] = file_name[len(file_name)-30 : len(file_name)-4 : 1]
+    info_eeg['description'] = file_name[len(file_name)-30 : len(file_name)-4 : 1]
    
     # look at the info
-    #print(info)
+    #print(info_eeg)
 
-    """ Create Raw object """ 
-   
-    # structure should be: rows: channels, columns: sample points)
+
+    """ Create data for Raw object for EEG data""" 
     
-    # first get EEG data from stream 1
-    eeg_data = np.array(streams[1]["time_series"].T)
+    # structure should be: 
+        # rows: channels
+        # columns: sample points
+    
+    # get EEG data from stream 1:
+    # 128 arrays (1 for each electrode), 186013 sampling points
+    data_eeg = np.array(streams[1]["time_series"].T) 
+
     # transform all values in eeg_data from Microvolt to Volt 
     # as NME expects EEG data to be measured in Volt (why tho)
-    eeg_data[:] *= 1e-6
+    data_eeg[:] *= 1e-6
     
+    
+    """ Create Raw object for EEG data""" 
+    # combine info, data & add events (triggers)
+    eeg_Raw = mne.io.RawArray(data_eeg, info_eeg)
+  
+    
+  
+    """ Add Events to Raw Object for EEG data"""
+    eeg_Raw.add_events(eog_events, 'STI 014')
+
+
+
+    #info = mne.create_info(['STI'], raw.info['sfreq'], ['stim'])
+    #stim_raw = mne.io.RawArray(stim_data, info)
+    #raw.add_channels([stim_raw], force_update_info=True)
+  
+    
+  
+    
+  
+    
+  
+    
+  
+    
+  
+    
+  
+    
+    
+
     # now append grip strength sensor data from stream 3:
-    # I have a different sampling rate here so I think I'll interpolate
-    # --> problem: timestamps of EEG data, Psychopy Markers and GSS data don't match!
-   
-    # Idea: Create NA array, fill in values at the correct time points, interpolate missing data
-    # I think cubic interpolation is nice for time series data, but not sure. 
+    # only 12707 sampling points here compared to 186013 for the EEG data 
+    # --> lower sampling rate than EEG data
+    # len(streams[3]["time_series"]) 
+    # len(streams[1]["time_series"]) 
     
-    #pd.DataFrame.interpolate
+    # Also, the timestamps are in the same range, but they do not match. See:  
+    # Compare timestamps: Is there a match (aka a value == True) anywhere in the resulting array?  
+    # np.any(np.in1d(streams[1]["time_stamps"], streams[3]["time_stamps"])) # Nope
     
+    # Idea: 
+    # Create second Raw object for GSS data, then resample to 550 Hz, 
+    # then add as new channel.
+
+    """ Create info for Raw Object for GSS data"""
+    # Sampling rate: I took the eeg sampling rate, in the tutorial script they took a value from stream 0
+    # but that was 0 in our case???
     
-    # use this to combine to Raw data object
-    #mne.io.RawArray
-   
-   
-   
-   
-   # To do: Add gss data and create raw object
-   
-   
-   
-   
-   
-   
-   
-   # Needs Fixing: 
+    # to get the sampling frequency of the Arduino, I took 400 timestamp values and 
+    # their "neighbors" and calculated the difference to get the mean time that passes between the samples. 
+    # If you divide 1 by this value and round it you get a sampling rate of 45 Hz:   
+    sampling_freq_gss = np.round(1/np.mean(streams[3]["time_stamps"][300:700] - streams[3]["time_stamps"][299:699]))
+
+    # quick check: if you do the same for the EEG timestamps, 
+    # you get 500 as a result, which corresponds to the sampling rate from the xdf info, so this is correct. 
+    #np.round(1/np.mean(streams[1]["time_stamps"][300:700] - streams[1]["time_stamps"][299:699]))
+    
+    # name and classify channel
+    ch_names_gss = ['GSS']
+    ch_types_gss = ['emg']
+    n_channels_gss = 1
+
+    # combine information 
+    info_gss = mne.create_info(ch_names_gss, ch_types = ch_types_gss, sfreq = sampling_freq_gss)
+    
+    # look at the info
+    #print(info_gss)
+
+    """ Get data & Create Raw Object for GSS data """
+    data_gss = np.array(streams[3]["time_series"].T) 
+    gss_Raw = mne.io.RawArray(data_gss, info_gss)
+
+    # resample gss data to 500 Hz to match the eeg data
+
+    gss_Raw = gss_Raw.resample(500)
+
+    # check if it worked: 
+    # gss_Raw.__len__() # 141189 sample points --> Yup! But still a bit shorter than the EEG data 
+
+"""
+# TO DO: 
+#Fix this
+    # add channel to EEG Raw object
+    eeg_Raw.add_channels = pass
+# Add events
+# Find out what to do about the timestamps
+"""
+
     # Plot data (I took a small excerpt from the start of the experiment)
     # I can't get this to work! 
     # Where are the gss data?? Why are the stim markers shown as a line and not as several vertical lines?
-    raw.plot(scalings = 'auto', color = dict(eeg='red', stim='blue', emg = 'black'), duration = 10, start = 1000)
+    raw.plot(scalings = 'auto', color = dict(eeg = 'red', stim = 'blue', emg = 'black'), duration = 10, start = 1000)
 
 
-    """ Look at the data we just saved in an nme raw object """
-    # The following part was my first approach for reading in the data, 
-    # but I think it's useful to have a look at the structure 
-    # load xdf file of chosen participant:
-    data, header = pyxdf.load_xdf(file_name)
+    raw.copy().pick_types(meg = False, eeg = False, stim = True).plot(start = 1000, duration = 100)
 
-
-    # have a look at every stream in the data:
-    # timestamps??? for what??: stream 0 
-    # EEG data & timestamps: stream 1
-    # experiment markers: stream 2
-    # sensor data: stream 3
-              
-    """ stream 1: get EEG data for each electrode """    
-    
-    # look at the data:
-    # len(data[1]['time_series'][0])
-    # data[1]['time_stamps']
-    
-    # get timestamps and values from each electrode and convert to pandas df as well 
-    # --> 1 column for each electrode & timestamp (= 128 x 2 =  256 columns)
-    # --> 1 row for each point in time (about 186013 rows)
-    
-    # There's one array with 128 values for each point in time, so first, 
-    # bind all of those arrays together as rows, so we have 1 column for each electrode    
-    timeseries_df = pd.DataFrame(data[1]['time_series'])
-
-    # now add the first column with the time stamps 
-    timeseries_df['timestamp'] = data[1]['time_stamps']
-
-    # create column names (first one is "timestamps", the other ones are the electrode numbers)
-    colnames = ["timestamps"]
-    for i in range(1, len(data[1]['time_series'][0])+1): # range: 1 - 128
-        colnames.append("electrode_" + str(i))
-    # assign new column names
-    timeseries_df.columns = colnames
-    
-    
-    """ stream 2: get grip strength sensor data """
-    # There are timestamps here as well, so get those and the sensor data   
-    
-    # look at the data:
-    # 137 triggers wih matching time stamps
-    # len(data[2]['time_series']) 
-    # len(data[2]['time_stamps'])
-           
-    # Idea: Find all rows where the timestamps match, then add a new column containg the triggers 
-    # at the correct time points and NAs where the timepoints didn't match       
-    
-    # get indices of rows with matching timestamps    
-    indices = timeseries_df.timestamps.loc[data[2]['time_stamps']] # there are no matches?!
-
-
-    # Problem: The EEG and trigger timestamps don't match AT ALL. What is this shit.
-    
-    # EEG timestamps
-    min(timeseries_df.timestamps)
-    max(timeseries_df.timestamps)
-    
-    # experiment trigger timestamps
-    min(data[1]['time_stamps'])
-    max(data[1]['time_stamps'])
-    
-    # gss timestamps
-    min(data[3]['time_stamps'])
-    max(data[3]['time_stamps'])
-
-    # gss timestamps and experiment timestamps are more or less
-    # in the same range, EEG timestamps are way lower?!
 
         
 # END LOOP PARTICIPANTS 
