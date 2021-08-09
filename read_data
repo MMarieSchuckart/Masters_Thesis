@@ -4,7 +4,7 @@
 Analysis for EEG & grip strength sensor (gss) data
 
 Part of Merle's Master Thesis
-Version 1: 4.8.2021
+Version 1: 9.8.2021
 
 """
 #-------------------------------------------------
@@ -46,12 +46,14 @@ import glob
 # os for setting working directory
 import os
 
-
 # import pandas for using dataframes like I would in R (f*** you python)
 import pandas as pd
 
-# NumPy
+# For getting descripives: NumPy
 import numpy as np
+
+# for turning nested list into 1D list
+from itertools import chain
 
 # --------------------------------------------------------
 
@@ -96,7 +98,9 @@ for file_name in file_list:
     n_channels = 126
 
     # combine information 
-    info_eeg = mne.create_info(ch_names, ch_types = ch_types, sfreq = sampling_freq)
+    info_eeg = mne.create_info(ch_names, 
+                               ch_types = ch_types, 
+                               sfreq = sampling_freq)
     
     # add name of the curent dataset (I could also add information like age or gender here)
     # (change this if the files names of the exp files are named differently)
@@ -106,7 +110,7 @@ for file_name in file_list:
     #print(info_eeg)
 
 
-    """ Create data for Raw object for EEG data""" 
+    """ Get EEG data for Raw object""" 
     
     # structure should be: 
         # rows: channels
@@ -124,99 +128,64 @@ for file_name in file_list:
     """ Create Raw object for EEG data""" 
     # combine info, data & add events (triggers)
     eeg_Raw = mne.io.RawArray(data_eeg, info_eeg)
-  
+      
+
+    """ Add Events & GSS data to Raw Object"""
+
+    # First Triggers:
+    # get names of triggers (it's a nested list in the xdf file)    
+    trigger_descriptions = streams[2]["time_series"]
+    # turn nested list into "normal" one dimensional list
+    trigger_descriptions = list(chain.from_iterable(trigger_descriptions)) 
+
+    # save descriptions + their timestamps as annotations for our Raw object
+    triggers_annot = mne.Annotations(onset = streams[2]["time_stamps"], # timestamps as onsets
+                                     duration = 0.001, # save as super short interval
+                                     description = trigger_descriptions)
     
-  
-    """ Add Events to Raw Object for EEG data"""
-    eeg_Raw.add_events(eog_events, 'STI 014')
+    # Now add GSS data:
+    # get gss values (it's a nested list in the xdf file)    
+    gss_values = streams[3]["time_series"]
+    # turn nested list into "normal" one dimensional list
+    gss_values = list(chain.from_iterable(gss_values)) 
+    
+    gss_annot = mne.Annotations(onset = streams[3]["time_stamps"], # timestamps as onsets
+                                duration = 0.001, # super short duration again
+                                description = gss_values) # descriptions in this case gss values
+    
+    # now add trigger and gss annotations to the Raw object 
+    # that's already containing the EEG data:
+    eeg_Raw.set_annotations(triggers_annot + gss_annot)
+
+    # plot data (use this to exclude bad channels / trials!)
+    eeg_Raw.plot(n_channels = 1)
+
+ 
+    # Hint for later: Use this for epoching  
+    #eeg_Raw.events_from_annotations()
+    
+    
 
 
 
-    #info = mne.create_info(['STI'], raw.info['sfreq'], ['stim'])
-    #stim_raw = mne.io.RawArray(stim_data, info)
-    #raw.add_channels([stim_raw], force_update_info=True)
-  
-    
-  
-    
-  
-    
-  
-    
-  
-    
-  
-    
-  
-    
-    
 
-    # now append grip strength sensor data from stream 3:
-    # only 12707 sampling points here compared to 186013 for the EEG data 
-    # --> lower sampling rate than EEG data
-    # len(streams[3]["time_series"]) 
-    # len(streams[1]["time_series"]) 
-    
-    # Also, the timestamps are in the same range, but they do not match. See:  
-    # Compare timestamps: Is there a match (aka a value == True) anywhere in the resulting array?  
-    # np.any(np.in1d(streams[1]["time_stamps"], streams[3]["time_stamps"])) # Nope
-    
-    # Idea: 
-    # Create second Raw object for GSS data, then resample to 550 Hz, 
-    # then add as new channel.
 
-    """ Create info for Raw Object for GSS data"""
-    # Sampling rate: I took the eeg sampling rate, in the tutorial script they took a value from stream 0
-    # but that was 0 in our case???
+
+
     
+    """ ---------------------- Useful stuff I might need later ------------------------"""
+
+    
+    # Arduino Sampling Frequency
     # to get the sampling frequency of the Arduino, I took 400 timestamp values and 
     # their "neighbors" and calculated the difference to get the mean time that passes between the samples. 
     # If you divide 1 by this value and round it you get a sampling rate of 45 Hz:   
-    sampling_freq_gss = np.round(1/np.mean(streams[3]["time_stamps"][300:700] - streams[3]["time_stamps"][299:699]))
+    sampling_freq_gss = np.round(1/np.mean(streams[3]["time_stamps"][300:700] - 
+                                           streams[3]["time_stamps"][299:699]))
 
     # quick check: if you do the same for the EEG timestamps, 
     # you get 500 as a result, which corresponds to the sampling rate from the xdf info, so this is correct. 
     #np.round(1/np.mean(streams[1]["time_stamps"][300:700] - streams[1]["time_stamps"][299:699]))
-    
-    # name and classify channel
-    ch_names_gss = ['GSS']
-    ch_types_gss = ['emg']
-    n_channels_gss = 1
-
-    # combine information 
-    info_gss = mne.create_info(ch_names_gss, ch_types = ch_types_gss, sfreq = sampling_freq_gss)
-    
-    # look at the info
-    #print(info_gss)
-
-    """ Get data & Create Raw Object for GSS data """
-    data_gss = np.array(streams[3]["time_series"].T) 
-    gss_Raw = mne.io.RawArray(data_gss, info_gss)
-
-    # resample gss data to 500 Hz to match the eeg data
-
-    gss_Raw = gss_Raw.resample(500)
-
-    # check if it worked: 
-    # gss_Raw.__len__() # 141189 sample points --> Yup! But still a bit shorter than the EEG data 
-
-"""
-# TO DO: 
-#Fix this
-    # add channel to EEG Raw object
-    eeg_Raw.add_channels = pass
-# Add events
-# Find out what to do about the timestamps
-"""
-
-    # Plot data (I took a small excerpt from the start of the experiment)
-    # I can't get this to work! 
-    # Where are the gss data?? Why are the stim markers shown as a line and not as several vertical lines?
-    raw.plot(scalings = 'auto', color = dict(eeg = 'red', stim = 'blue', emg = 'black'), duration = 10, start = 1000)
-
-
-    raw.copy().pick_types(meg = False, eeg = False, stim = True).plot(start = 1000, duration = 100)
-
 
         
 # END LOOP PARTICIPANTS 
