@@ -30,7 +30,6 @@ Version 1: 9.8.2021
 # Now import package for reading in xdf data:
 import pyxdf
 
-
 # Python MNE for eeg data analysis / processing
 # put this into your terminal to install python nme
     # pip install mne
@@ -38,10 +37,8 @@ import pyxdf
 # necessary dependencies (numpy, scipy, and matplotlib).    
 import mne
 
-
 # glob for getting all files in a directory
 import glob
-
 
 # os for setting working directory
 import os
@@ -52,9 +49,15 @@ import pandas as pd
 # For getting descripives: NumPy
 import numpy as np
 
+# for getting fractional parts of number (aka ms from the timestamps)
+import math
+
 # for turning nested list into 1D list
 from itertools import chain
 
+# for working with timestamps
+import datetime as dt
+from datetime import timezone
 # --------------------------------------------------------
 
 # working directory
@@ -70,7 +73,6 @@ subj_n = len(file_list)
 
 # loop xdf file names in file_list aka participants:
 for file_name in file_list:
-
     
     """ read in XDF data """
     streams, header = pyxdf.load_xdf(file_name)
@@ -106,12 +108,31 @@ for file_name in file_list:
     # (change this if the files names of the exp files are named differently)
     info_eeg['description'] = file_name[len(file_name)-30 : len(file_name)-4 : 1]
    
+    # If you look at the first timestamp of stream 1, 2 & 3, you can see that 
+    # they don't match. The EEG for example started recording 
+    # way earlier than the Arduino:
+    #streams[1]["time_stamps"][0] 
+    #streams[3]["time_stamps"][0] 
+    
+    # That's why we now add a measurement date (akatimestamp of first eeg sample)
+    # to the info object for the eeg data. The gss data and the triggers 
+    # will get their own onset timestamps relative to this one.
+    
+    # create a random datetime (I took 1.8.2021, 00:00:00)
+    meas_date = dt.datetime(2021, 8, 1, 0, 0, 0, 0) 
+    # add timestamp of first sample to datetime
+    first_eeg_sample = streams[1]["time_stamps"][0] 
+    time_format = '%Y-%m-%d %H:%M:%S.%f' # use UTC formatted strings
+    eeg_onset = (meas_date + dt.timedelta(seconds =+ first_eeg_sample)).strftime(time_format)
+    
+    # add to info of Raw object
+    info_eeg['meas_date'] = eeg_onset
+
     # look at the info
     #print(info_eeg)
 
 
     """ Get EEG data for Raw object""" 
-    
     # structure should be: 
         # rows: channels
         # columns: sample points
@@ -124,50 +145,60 @@ for file_name in file_list:
     # as NME expects EEG data to be measured in Volt (why tho)
     data_eeg[:] *= 1e-6
     
-    
+        
     """ Create Raw object for EEG data""" 
-    # combine info, data & add events (triggers)
+    # combine info & eeg data
     eeg_Raw = mne.io.RawArray(data_eeg, info_eeg)
-      
 
-    """ Add Events & GSS data to Raw Object"""
+
+    """ Add Events & GSS data as Annotations to Raw Object"""
 
     # First Triggers:
     # get names of triggers (it's a nested list in the xdf file)    
     trigger_descriptions = streams[2]["time_series"]
     # turn nested list into "normal" one dimensional list
     trigger_descriptions = list(chain.from_iterable(trigger_descriptions)) 
-
-    # save descriptions + their timestamps as annotations for our Raw object
-    triggers_annot = mne.Annotations(onset = streams[2]["time_stamps"], # timestamps as onsets
-                                     duration = 0.001, # save as super short interval
-                                     description = trigger_descriptions)
     
+    # save first timestamp as onset
+    first_trigger = streams[2]["time_stamps"][0] 
+    trigger_onset = (meas_date + dt.timedelta(seconds =+ first_trigger)).strftime(time_format)
+
+    # save descriptions, their timestamps & the onset as annotations for our Raw object
+    triggers_annot = mne.Annotations(onset = streams[2]["time_stamps"], 
+                                     duration = 1, 
+                                     description = trigger_descriptions, 
+                                     orig_time = trigger_onset)
+    
+
     # Now add GSS data:
     # get gss values (it's a nested list in the xdf file)    
     gss_values = streams[3]["time_series"]
     # turn nested list into "normal" one dimensional list
     gss_values = list(chain.from_iterable(gss_values)) 
+
+    # save first timestamp as onset
+    first_gss_sample = streams[3]["time_stamps"][0] 
+    gss_onset = (meas_date + dt.timedelta(seconds =+ first_gss_sample)).strftime(time_format)
+
+    # save as annotations
+    gss_annot = mne.Annotations(onset = streams[3]["time_stamps"], 
+                                duration = 1, 
+                                description = gss_values,
+                                orig_time = gss_onset) 
     
-    gss_annot = mne.Annotations(onset = streams[3]["time_stamps"], # timestamps as onsets
-                                duration = 0.001, # super short duration again
-                                description = gss_values) # descriptions in this case gss values
     
-    # now add trigger and gss annotations to the Raw object 
-    # that's already containing the EEG data:
-    eeg_Raw.set_annotations(triggers_annot + gss_annot)
+    # Add trigger and gss annotations to the Raw object that's already containing the EEG data
+    #eeg_Raw.set_annotations(triggers_annot + gss_annot)
+    eeg_Raw.set_annotations(triggers_annot)
 
     # plot data (use this to exclude bad channels / trials!)
-    eeg_Raw.plot(n_channels = 1)
+    eeg_Raw.plot(n_channels = 1, duration = 10, highpass = 13, lowpass = 30)
 
- 
+    eeg_Raw.annotations.onset
+
     # Hint for later: Use this for epoching  
     #eeg_Raw.events_from_annotations()
     
-    
-
-
-
 
 
 
@@ -180,13 +211,10 @@ for file_name in file_list:
     # to get the sampling frequency of the Arduino, I took 400 timestamp values and 
     # their "neighbors" and calculated the difference to get the mean time that passes between the samples. 
     # If you divide 1 by this value and round it you get a sampling rate of 45 Hz:   
-    sampling_freq_gss = np.round(1/np.mean(streams[3]["time_stamps"][300:700] - 
-                                           streams[3]["time_stamps"][299:699]))
+    sampling_freq_gss = np.round(1/np.mean(streams[3]["time_stamps"][300:700] - streams[3]["time_stamps"][299:699]))
 
     # quick check: if you do the same for the EEG timestamps, 
     # you get 500 as a result, which corresponds to the sampling rate from the xdf info, so this is correct. 
     #np.round(1/np.mean(streams[1]["time_stamps"][300:700] - streams[1]["time_stamps"][299:699]))
 
-        
-# END LOOP PARTICIPANTS 
-
+# END LOOP PARTICIPANTS
