@@ -4,7 +4,7 @@
 Analysis for EEG & grip strength sensor (gss) data
 
 Part of Merle's Master Thesis
-Version 1: 9.8.2021
+Version 1: 10.8.2021
 
 """
 #-------------------------------------------------
@@ -57,7 +57,7 @@ from itertools import chain
 
 # for working with timestamps
 import datetime as dt
-from datetime import timezone
+
 # --------------------------------------------------------
 
 # working directory
