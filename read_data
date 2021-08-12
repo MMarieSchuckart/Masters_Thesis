@@ -4,13 +4,14 @@
 Analysis for EEG & grip strength sensor (gss) data
 
 Part of Merle's Master Thesis
-Version 1: 10.8.2021
+Version 1: 12.8.2021
 
 """
 #-------------------------------------------------
 
+""" settings """
 
-""" 1. packages & variables """
+""" 1.1 load packages """
 
 # Install package to read xdf data
 # I spent quite some time figuring this out: 
@@ -55,10 +56,51 @@ import math
 # for turning nested list into 1D list
 from itertools import chain
 
-# for working with timestamps
-import datetime as dt
 
 # --------------------------------------------------------
+
+""" 1.2 set variables for the preproc"""
+
+
+""" 1.2.1 set variables for the EEG data preproc """
+# highpass filter (use 12.5 Hz for beta band - correct frequency?)
+eeg_bandpass_fmin = 12.4 
+# lowpass filter (use 30 Hz for beta band)
+eeg_bandpass_fmax = 30
+# set type of window filter
+eeg_window_filter_type = 'hamming'
+
+# set cutoffs for epoching
+eeg_prestim_cutoff = -1 # use seconds here; which intervall makes sense in my case?
+eeg_poststim_cutoff = 1 
+
+# set variables for the ICA:
+ica = ICA(method = 'fastica', 
+          random_state = 42, 
+          n_components = 2) # set number of independent components! How many????
+    
+
+""" 1.2.2 set variables for the gss data preproc """
+# highpass filter:
+sensor_bandpass_fmin = 1
+# lowpass filter (which cutoff should I use???)
+sensor_bandpass_fmax = 20
+# set type of window filter
+sensor_window_filter_type = 'hamming'
+# set filter design (what's this???)
+eeg_fir_design = 'firwin'
+
+
+""" 1.2.3 settings for epoching """
+# set cutoffs (in seconds) for epoching:
+sensor_prestim_cutoff = -1 # which intervall makes sense in my case?
+sensor_poststim_cutoff = 1 
+
+
+
+# --------------------------------------------------------
+
+""" 2. read in data """
 
 # working directory
 os.chdir("/Users/merle/Desktop/Masterarbeit/Master_Testdaten/")
@@ -71,17 +113,21 @@ file_list = glob.glob("/Users/merle/Desktop/Masterarbeit/Master_Testdaten/*.xdf"
 # set number of subjects as number of xdf files in directory
 subj_n = len(file_list)
 
+# Create empty lists to keep track of plots (before and after filtering)
+eeg_figs_before_filtering = []
+eeg_figs_after_filtering = []
+
 # loop xdf file names in file_list aka participants:
 for file_name in file_list:
     
-    """ read in XDF data """
+    """ 2.1 read in XDF data """
     streams, header = pyxdf.load_xdf(file_name)
 
     # Raise a hue & cry if data doesn't have 4 streams!
     assert len(streams) == 4  # 1 EEG markers (?), 1 EEG, 1 stim channel, 1 gss channel
 
     
-    """ Build NME data object from scratch """
+    """ 2.2 Build NME data object from scratch """
     # stream 0: general info? actiCHampMarkers (whatever that is)
     # stream 1: Actichamp - EEG data
     # stream 2: PsychoPyMarkers - Experiment markers
@@ -90,7 +136,7 @@ for file_name in file_list:
     # each stream contains timestamps (measured in seconds)
     
     
-    """ Create info for Raw Object for EEG data"""
+    """ 2.2.1 Create info for Raw Object for EEG data"""
     # Sampling rate: 500 Hz
     sampling_freq = float(streams[1]["info"]["nominal_srate"][0]) # in Hertz
     
@@ -108,31 +154,12 @@ for file_name in file_list:
     # (change this if the files names of the exp files are named differently)
     info_eeg['description'] = file_name[len(file_name)-30 : len(file_name)-4 : 1]
    
-    # If you look at the first timestamp of stream 1, 2 & 3, you can see that 
-    # they don't match. The EEG for example started recording 
-    # way earlier than the Arduino:
-    #streams[1]["time_stamps"][0] 
-    #streams[3]["time_stamps"][0] 
-    
-    # That's why we now add a measurement date (akatimestamp of first eeg sample)
-    # to the info object for the eeg data. The gss data and the triggers 
-    # will get their own onset timestamps relative to this one.
-    
-    # create a random datetime (I took 1.8.2021, 00:00:00)
-    meas_date = dt.datetime(2021, 8, 1, 0, 0, 0, 0) 
-    # add timestamp of first sample to datetime
-    first_eeg_sample = streams[1]["time_stamps"][0] 
-    time_format = '%Y-%m-%d %H:%M:%S.%f' # use UTC formatted strings
-    eeg_onset = (meas_date + dt.timedelta(seconds =+ first_eeg_sample)).strftime(time_format)
-    
-    # add to info of Raw object
-    info_eeg['meas_date'] = eeg_onset
-
     # look at the info
     #print(info_eeg)
+   
 
 
-    """ Get EEG data for Raw object""" 
+    """ 2.2.2 Get EEG data for Raw object""" 
     # structure should be: 
         # rows: channels
         # columns: sample points
@@ -146,64 +173,126 @@ for file_name in file_list:
     data_eeg[:] *= 1e-6
     
         
-    """ Create Raw object for EEG data""" 
+    """ 2.2.3 Create Raw object for EEG data""" 
     # combine info & eeg data
     eeg_Raw = mne.io.RawArray(data_eeg, info_eeg)
 
 
-    """ Add Events & GSS data as Annotations to Raw Object"""
+    """ 2.2.4 Add Events & GSS data as Annotations to Raw Object"""
+       
+    # If you look at the first timestamp of stream 1, 2 & 3, you can see that 
+    # they don't match. The EEG for example started recording 
+    # way earlier than the Arduino:
+    #streams[1]["time_stamps"][0] 
+    #streams[3]["time_stamps"][0] 
+   
+    # This means I need to include information on when the 
+    # Triggers and GSS values started or else MNE assumes 
+    # the streams all started at the same time which is not the case.
+   
+    # If you look at when the streams were created, 
+    # you see that they are not 0, which means they're 
+    # probably all relative to some shared event 
+    # (like turning on the computer? Idk.)
+    #streams[3]['info']['created_at']
+    #streams[2]['info']['created_at']
+    #streams[1]['info']['created_at'] 
+   
+    # Solution: Set onset of EEG stream to None (that's the default anyway)
+    # and subtract onset of EEG stream from GSS & Trigger data. 
+    # This way the timestamps are relative to the EEG onset.
+       
+    # get difference between EEG onset and onset of Triggers
+    eeg_onset = streams[1]["time_stamps"][0] 
+    trigger_timestamps = streams[2]["time_stamps"] - eeg_onset
+    gss_timestamps = streams[3]["time_stamps"] - eeg_onset
+    
 
-    # First Triggers:
+    # Now get Trigger & GSS values
+
     # get names of triggers (it's a nested list in the xdf file)    
     trigger_descriptions = streams[2]["time_series"]
     # turn nested list into "normal" one dimensional list
     trigger_descriptions = list(chain.from_iterable(trigger_descriptions)) 
     
-    # save first timestamp as onset
-    first_trigger = streams[2]["time_stamps"][0] 
-    trigger_onset = (meas_date + dt.timedelta(seconds =+ first_trigger)).strftime(time_format)
-
-    # save descriptions, their timestamps & the onset as annotations for our Raw object
-    triggers_annot = mne.Annotations(onset = streams[2]["time_stamps"], 
-                                     duration = 1, 
-                                     description = trigger_descriptions, 
-                                     orig_time = trigger_onset)
     
-
-    # Now add GSS data:
     # get gss values (it's a nested list in the xdf file)    
     gss_values = streams[3]["time_series"]
     # turn nested list into "normal" one dimensional list
     gss_values = list(chain.from_iterable(gss_values)) 
-
-    # save first timestamp as onset
-    first_gss_sample = streams[3]["time_stamps"][0] 
-    gss_onset = (meas_date + dt.timedelta(seconds =+ first_gss_sample)).strftime(time_format)
-
-    # save as annotations
-    gss_annot = mne.Annotations(onset = streams[3]["time_stamps"], 
-                                duration = 1, 
-                                description = gss_values,
-                                orig_time = gss_onset) 
     
+    # save trigger descriptions & their onsets as annotations for our Raw object
+    triggers_annot = mne.Annotations(onset = trigger_timestamps, duration = .001, description = trigger_descriptions)
     
-    # Add trigger and gss annotations to the Raw object that's already containing the EEG data
-    #eeg_Raw.set_annotations(triggers_annot + gss_annot)
-    eeg_Raw.set_annotations(triggers_annot)
+    # save GSS values & their onsets as annotations
+    gss_annot = mne.Annotations(onset = gss_timestamps, duration = 0.001, description = gss_values) 
+    
+    # there's a bug in MNE, you have to set a filename to be able to use annotations
+    eeg_Raw._filenames = ['dummy_file_name'] 
+   
+    # not set annotations
+    eeg_Raw.set_annotations(triggers_annot + gss_annot)
 
     # plot data (use this to exclude bad channels / trials!)
     eeg_Raw.plot(n_channels = 1, duration = 10, highpass = 13, lowpass = 30)
-
-    eeg_Raw.annotations.onset
 
     # Hint for later: Use this for epoching  
     #eeg_Raw.events_from_annotations()
     
 
+    """ 2.2.5 plot raw data """
+    # Check if you can see the triggers
+    # I filtered the data a bit, but this is only for the 
+    # representation in the plot, this doesn't affect the data!
+    # eeg_Raw.plot(start = 5, duration = 1, highpass = 13, lowpass = 30)
+
+
+# --------------------------------------------------------
+    """ 3. Preprocessing """
+
+
+    """ 3.1 pick eeg electrodes """
 
 
 
-    
+
+
+    """ 3.2 filter the eeg & gss data """
+    # Filter data of each subject 
+
+    # Bandpass filter for the data (creates a copy with filtered data)
+    eeg_Raw_filt = eeg_Raw.copy().filter(bandpass_fmin = eeg_bandpass_fmin, 
+                                         bandpass_fmax = eeg_bandpass_fmax, 
+                                         l_trans_bandwidth = 'auto',
+                                         h_trans_bandwidth = 'auto', 
+                                         filter_length = 'auto', 
+                                         phase = 'zero',
+                                         fir_window = eeg_window_filter_type, 
+                                         fir_design = eeg_fir_design, 
+                                         n_jobs = n_jobs)
+
+
+    # gss filtering?
+
+
+    # Make a plot of the PSD before and after filtering
+    # What the hell is a PSD???
+    # Anyway. Make a figure for each participant's data before and after filtering 
+    # and append to figs_before list:
+    eeg_figs_before_filtering.append(eeg_Raw.plot_psd(show=False))
+    eeg_figs_after_filtering.append(eeg_Raw_filt.plot_psd(show=False))
+
+
+    """3.3 epoching """
+    # Hint for later: Use this for epoching  
+    eeg_Raw.events_from_annotations()
+
+    """ 3.4 exclude bad channels / trials """
+    # use this to exclude bad channels / trials!)
+    eeg_Raw.plot(n_channels = 1, duration = 10, highpass = 13, lowpass = 30)
+
+
+
     """ ---------------------- Useful stuff I might need later ------------------------"""
 
     
@@ -217,4 +306,3 @@ for file_name in file_list:
     # you get 500 as a result, which corresponds to the sampling rate from the xdf info, so this is correct. 
     #np.round(1/np.mean(streams[1]["time_stamps"][300:700] - streams[1]["time_stamps"][299:699]))
 
-# END LOOP PARTICIPANTS
