@@ -4,7 +4,7 @@
 Analysis for EEG & grip strength sensor (gss) data
 
 Part of Merle's Master Thesis
-Version 1: 17.8.2021
+Version 1: 18.8.2021
 
 """
 #-------------------------------------------------
@@ -38,6 +38,9 @@ import pyxdf
 # necessary dependencies (numpy, scipy, and matplotlib).    
 import mne
 
+# import ICA function
+from mne.preprocessing import ICA, create_eog_epochs
+
 # glob for getting all files in a directory
 import glob
 
@@ -61,47 +64,75 @@ from itertools import chain
 
 """ 1.2 set variables for the preproc"""
 
+""" 1.2.1 pick channels """
 
-""" 1.2.1 set variables for the EEG data preproc """
-# highpass filter (use 12.5 Hz for beta band - correct frequency?)
-eeg_bandpass_fmin = 12.4 
-# lowpass filter (use 30 Hz for beta band)
-eeg_bandpass_fmax = 30
-# set type of window filter
-eeg_window_filter_type = 'hamming'
-# set number of ????
-n_jobs = 1
+# channels to pick up signal from auditory cortex: 
+# 65, 1, 69 & the four neighboring electrodes 33, 38, 66 & 68 
 
-# set cutoffs for epoching
-eeg_prestim_cutoff = -1 # use seconds here; which intervall makes sense in my case?
-eeg_poststim_cutoff = 1 
+# channels to pick up signal from right hand area of motor cortex: 
+# 71 as center + neighboring electrodes 34, 77, 2, 5, 35 & 78
+
+# visual cortex: 108 54 55 109 61 117 118 63    
+
+eeg_channel_picks = ["EEG_065", "EEG_001", "EEG_069",
+                     "EEG_71", "EEG_034", "EEG_077", 
+                     "EEG_002","EEG_005", "EEG_035", 
+                     "EEG_078", "EEG_108", "EEG_54", 
+                     "EEG_55", "EEG_109", "EEG_61", 
+                     "EEG_117", "EEG_118", "EEG_63"]
+
+# choose eog channels (the 3 eeg channels from the face)
+eog_channels = ["EEG_020", "EEG_031", "EEG_032"]
 
 
-# set variables for the ICA:
-#ica = ICA(method = 'fastica', 
-#          random_state = 42, 
-#          n_components = 2) # set number of independent components! How many????
-    
+""" 1.2.2 set variables for the EEG data preproc """
 
-""" 1.2.2 set variables for the gss data preproc """
-# highpass filter:
-sensor_bandpass_fmin = 1
-
-# lowpass filter (which cutoff should I use???)
-sensor_bandpass_fmax = 20
-
-# set type of window filter
-sensor_window_filter_type = 'hamming'
-
-# set filter design
+# set filter type
 # = default option; gives improved attenuation using fewer samples than “firwin2”
 eeg_fir_design = 'firwin' 
+# set type of window function
+eeg_window_type = 'hamming'
+# zero phase filter
+eeg_phase = "zero"
+# highpass filter 
+eeg_bandpass_fmin = 5
+# lowpass filter 
+eeg_bandpass_fmax = 35,
+# set number of runs to run in parallel
+n_jobs = 1
 
 
-""" 1.2.3 settings for epoching """
+""" 1.2.3 set variables for the gss data preproc """
+
+# set filter design
+sensor_fir_design = 'firwin' 
+# set type of window function
+sensor_window_type = 'hamming'
+# highpass filter:
+sensor_bandpass_fmin = 4
+# lowpass filter
+sensor_bandpass_fmax = 12
+# use n_jobs from eeg settings (n_jobs = 1)
+
+""" 1.2.4 settings for gss epoching """
 # set cutoffs (in seconds) for epoching:
-sensor_prestim_cutoff = -1 # which intervall makes sense in my case?
-sensor_poststim_cutoff = 1 
+# get "4–12 Hz range since this range is where a majority 
+# of the tremor is contained" (Archer et al., 2018)
+sensor_prestim_cutoff = -1.5 
+sensor_poststim_cutoff = 4 
+
+
+""" 1.2.5 Define parameters of ICA """
+
+# Use fast ICA (default in MNE).
+# n_components = Include components based on 
+# how much variance they explain. Use a higher value 
+# (e.g. 0.999) for n_components for Maxwell-filtered data 
+# (we use 0.98 for non-Maxwell-filtered data)
+ica_n_components = 0.98
+ica = ICA(method = 'fastica', 
+          n_components = ica_n_components)
+
 
 # --------------------------------------------------------
 
@@ -244,19 +275,99 @@ for file_name in file_list:
     # representation in the plot, it doesn't affect the data!
     # eeg_Raw.plot(start = 5, duration = 1, highpass = 13, lowpass = 30)
 
-
+    """ save raw data in old_eeg_Raw before preprocessing """
+    old_eeg_Raw = eeg_Raw.copy()
+    # also save object to disc?
+   
+    
+   
 # --------------------------------------------------------
     """ 3. Preprocessing """
 
+    """ 3.1 pick the right channels """
 
-    """ 3.1 pick relevant eeg channels, drop all data from sensor locations we don't need """
-    # I just picked the first 3 channels to test if it works - change to actual names later  
-    eeg_Raw.pick_channels(['EEG_001', 'EEG_002', 'EEG_003']) 
+    # create another Raw object & get EOG channels
+    eog_Raw = eeg_Raw.copy()
+    eog_Raw.pick_channels(eog_channels)
+
+    # Pick EEG channels
+    eeg_Raw.pick_channels(eeg_channel_picks)
+
+
+    """ 3.2 filter data """
+    
+    """ Bandpass filter the EEG data """
+    # (I set the variables used here at the beginning of this script)
+    eeg_Raw.filter(picks = eeg_channel_picks,
+                   l_freq = eeg_bandpass_fmin, 
+                   h_freq = eeg_bandpass_fmax,   
+                   phase = eeg_phase,
+                   fir_window = eeg_window_type, 
+                   fir_design = eeg_fir_design, 
+                   n_jobs = n_jobs)
+    
+
+    """ Highpass filter EOG data """ 
+    # Reminder for myself:
+    # Before performing an ICA, you should always high-pass-filter 
+    # the data as the ICA reacts pretty sensitive to slow drifts. 
+    # Ideally, kick out everything < 1 Hz. 
+    
+    eog_Raw.filter(h_freq = None, 
+                   l_freq = 1,
+                   phase='zero', 
+                   fir_window='hamming',
+                   fir_design='firwin', 
+                   n_jobs = n_jobs)
+
+    #f = fname.filt(subject = subject, run = run,
+    #               fmin = bandpass_fmin, fmax = bandpass_fmax)
+    #raw_filt.save(f, overwrite=True)
+    
+    
+    
+    
+    """ 3.3 Change description of the 3 EOG channels to eog instead of eeg """
+    
+    
+    
+    
+    
+    
+    
+    """ 3.4 ICA to filter out EOG artifacts """ 
+           
+    # To compute an ICA, I only need a subset of the data so I can 
+    # perform the statistics to a reasonable degree. Therefore, use every 11th
+    # sample. 
+    ica.fit(eog_Raw, decim = 11)
+    
+    print('Fit %d components (explaining at least %0.1f%% of the variance)' % (ica.n_components, 100 * ica_n_components))
+
+    # Find onsets of blinks. Create epochs around them
+    eog_epochs = create_eog_epochs(eog_Raw, tmin=-.5, tmax=.5, preload=False)
+
+    # Find ICA components that correlate with eye blinks
+    eog_epochs.decimate(5)
+    eog_epochs.load_data()
+    eog_epochs.apply_baseline((None, None))
+    eog_inds, eog_scores = ica.find_bads_eog(eog_epochs)
+    eog_scores = np.max(np.abs(eog_scores), axis=0)
+    # Look for components with a correlation > 0.1 to the EOG channels
+    rank = np.argsort(eog_scores)[::-1]
+    rank = [r for r in rank if eog_scores[r] > 0.1]
+    ica.exclude += rank[:n_eog_components]
+    print('    Found %d EOG indices' % (len(eog_inds),))
+
+    # Save the ICA decomposition
+    # ica.save(fname.ica(subject = subject))
+
+
 
 
     """ get epochs """    
-    # max_force_xxx -> initiale maximalkraft der Probandin
-    # blockn -> Blöcke 0-3, 0=Training
+    # max_force_xxx -> initial maximum grip force of participant
+    # blockn -> Blocks 0 - 3, Block 0 = Training
 
     # 5 triggers per trial:
     #    1. epoch_vo_start -> start of epoch (= trial?)
@@ -305,64 +416,14 @@ for file_name in file_list:
     # loop epochs, filter the data, then get rid of bad trials
     for epoch in epochs: 
         
-        """ Baseline correction to get rid of slow drifts """
 
-
-
-    
-
-        """ clean data using ICA """
-        # does this make sense in my case?
-    
-
-
-        """ filter the eeg & gss data (use ICA cleaned data) """
-        # Filter data of each subject 
-
-        # Bandpass filter for the data (creates a copy with filtered data)
-        eeg_Raw_filt = eeg_Raw.copy().filter(bandpass_fmin = eeg_bandpass_fmin, 
-                                             bandpass_fmax = eeg_bandpass_fmax, 
-                                             l_trans_bandwidth = 'auto',
-                                             h_trans_bandwidth = 'auto', 
-                                             filter_length = 'auto', 
-                                             phase = 'zero', # compensate for delay of the filter
-                                             fir_window = eeg_window_filter_type, 
-                                             fir_design = eeg_fir_design, 
-                                             n_jobs = n_jobs)
-
+        """ 3.4 exclude bad eeg trials """
         # visual rejection of bad epochs
-
-
-
-
-        """ 3.4 exclude bad trials """
-        # use this to exclude bad trials!)
     
         fig = eeg_Raw.plot()
         fig.canvas.key_press_event('a')
 
-
-
-
-
-    """ gss filtering??? """
-    # get "4–12 Hz range since this range is where a majority of the tremor is contained" 
-    # (Archer et al., 2018 --> Elble, 1986; Elble et al., 1994; Deuschl and Elble, 2000; Neely et al., 2015)
-
-
-
-
-
-
-""" Frequency Analysis """
-    
-    
-    
-    
-    
-    
-""" Connectivity Analysis """
-
+        """ exclude bad gss trials """
 
 
 
