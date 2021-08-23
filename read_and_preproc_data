@@ -4,7 +4,7 @@
 Analysis for EEG & grip strength sensor (gss) data
 
 Part of Merle's Master Thesis
-Version 1: 18.8.2021
+Version 1: 12.8.2021
 
 """
 #-------------------------------------------------
@@ -50,7 +50,7 @@ import os
 # import pandas for using dataframes like I would in R (f*** you python)
 import pandas as pd
 
-# For getting descripives: NumPy
+# For getting means, SDs, sums,...
 import numpy as np
 
 # for getting fractional parts of number (aka ms from the timestamps)
@@ -214,7 +214,11 @@ for file_name in file_list:
     eeg_Raw = mne.io.RawArray(data_eeg, info_eeg)
 
 
-    """ 2.2.4 Add Events & GSS data as Annotations to Raw Object"""
+    """ 2.2.4 change the 3 EEG channels in the face to EOG channel type """
+    eeg_Raw.set_channel_types(mapping = {"EEG_031" : "eog", "EEG_032" : "eog", "EEG_020" : "eog"})
+
+
+    """ 2.2.5 Add Events & GSS data as Annotations to Raw Object"""
        
     # If you look at the first timestamp of stream 1, 2 & 3, you can see that 
     # they don't match. The EEG for example started recording 
@@ -267,13 +271,41 @@ for file_name in file_list:
     eeg_Raw._filenames = ['dummy_file_name'] 
    
     # set annotations
-    eeg_Raw.set_annotations(triggers_annot + gss_annot)
+    #eeg_Raw.set_annotations(triggers_annot + gss_annot)
+
+
+    """ 2.2.6 Detect & annotate blinks """
+    
+    # find_eog_events filters the data before detecting oeg events:
+    # FIR two-pass forward and reverse, zero-phase, 
+    # non-causal bandpass filter from 1 - 10 Hz with Hann window
+        
+    # find all eog events
+    eog_events = mne.preprocessing.find_eog_events(eeg_Raw)
+    
+    # set onset as 250 ms before the peak of the blink
+    onsets = eog_events[:, 0] / eeg_Raw.info['sfreq'] - 0.25
+    
+    # set duration of blink epoch (500 ms around peak)
+    durations = [0.5] * len(eog_events)
+    
+    # create description for blinks
+    descriptions = ['bad blink'] * len(eog_events)
+    
+    # create annotation object for the detected blinks
+    blink_annot = mne.Annotations(onsets, durations, descriptions,
+                              orig_time = eeg_Raw.info['meas_date'])
+    
+    # set triggers and blinks as annotations
+    eeg_Raw.set_annotations(triggers_annot + blink_annot)
+
+
 
     """ 2.2.5 plot raw data """
     # (careful, this takes a lot of time!)
     # I filtered the data a bit, but this is only for the 
     # representation in the plot, it doesn't affect the data!
-    # eeg_Raw.plot(start = 5, duration = 1, highpass = 13, lowpass = 30)
+    # raw_plot = eeg_Raw.plot(highpass = 13, lowpass = 30, show_scrollbars = True)
 
     """ save raw data in old_eeg_Raw before preprocessing """
     old_eeg_Raw = eeg_Raw.copy()
@@ -283,21 +315,14 @@ for file_name in file_list:
    
 # --------------------------------------------------------
     """ 3. Preprocessing """
-
+    # (I set the variables used here at the beginning of this script)
+    
     """ 3.1 pick the right channels """
-
-    # create another Raw object & get EOG channels
-    eog_Raw = eeg_Raw.copy()
-    eog_Raw.pick_channels(eog_channels)
-
     # Pick EEG channels
     eeg_Raw.pick_channels(eeg_channel_picks)
 
 
-    """ 3.2 filter data """
-    
-    """ Bandpass filter the EEG data """
-    # (I set the variables used here at the beginning of this script)
+    """ 3.2 filter EEG data """
     eeg_Raw.filter(picks = eeg_channel_picks,
                    l_freq = eeg_bandpass_fmin, 
                    h_freq = eeg_bandpass_fmax,   
@@ -306,64 +331,6 @@ for file_name in file_list:
                    fir_design = eeg_fir_design, 
                    n_jobs = n_jobs)
     
-
-    """ Highpass filter EOG data """ 
-    # Reminder for myself:
-    # Before performing an ICA, you should always high-pass-filter 
-    # the data as the ICA reacts pretty sensitive to slow drifts. 
-    # Ideally, kick out everything < 1 Hz. 
-    
-    eog_Raw.filter(h_freq = None, 
-                   l_freq = 1,
-                   phase='zero', 
-                   fir_window='hamming',
-                   fir_design='firwin', 
-                   n_jobs = n_jobs)
-
-    #f = fname.filt(subject = subject, run = run,
-    #               fmin = bandpass_fmin, fmax = bandpass_fmax)
-    #raw_filt.save(f, overwrite=True)
-    
-    
-    
-    
-    """ 3.3 Change description of the 3 EOG channels to eog instead of eeg """
-    
-    
-    
-    
-    
-    
-    
-    """ 3.4 ICA to filter out EOG artifacts """ 
-           
-    # To compute an ICA, I only need a subset of the data so I can 
-    # perform the statistics to a reasonable degree. Therefore, use every 11th
-    # sample. 
-    ica.fit(eog_Raw, decim = 11)
-    
-    print('Fit %d components (explaining at least %0.1f%% of the variance)' % (ica.n_components, 100 * ica_n_components))
-
-    # Find onsets of blinks. Create epochs around them
-    eog_epochs = create_eog_epochs(eog_Raw, tmin=-.5, tmax=.5, preload=False)
-
-    # Find ICA components that correlate with eye blinks
-    eog_epochs.decimate(5)
-    eog_epochs.load_data()
-    eog_epochs.apply_baseline((None, None))
-    eog_inds, eog_scores = ica.find_bads_eog(eog_epochs)
-    eog_scores = np.max(np.abs(eog_scores), axis=0)
-    # Look for components with a correlation > 0.1 to the EOG channels
-    rank = np.argsort(eog_scores)[::-1]
-    rank = [r for r in rank if eog_scores[r] > 0.1]
-    ica.exclude += rank[:n_eog_components]
-    print('    Found %d EOG indices' % (len(eog_inds),))
-
-    # Save the ICA decomposition
-    # ica.save(fname.ica(subject = subject))
-
-
-
 
     """ get epochs """    
     # max_force_xxx -> initial maximum grip force of participant
@@ -388,47 +355,9 @@ for file_name in file_list:
     # Also, round strings instead of truncating them so we get unique time values
     events, event_id = mne.events_from_annotations(eeg_Raw, regexp='(^[btefm]).*$', use_rounding = True)
     
-    # set length of trials around events (in seconds)
-    epoch_tmin, epoch_tmax = -1, 1  
-
-    # there are still non-unique values in the event time stamps
-    # so merge events (can't keep them both separately),
-    # but doesn't matter because it seems like trial_end and 
-    # start of new block sometimes share a timestamp
-    epochs = mne.Epochs(eeg_Raw, events, event_id, 
-                        epoch_tmin - 0.5, 
-                        epoch_tmax + 0.5, 
-                        baseline = None, 
-                        preload = True, 
-                        event_repeated = "merge")
-
-
-    # TO DO: The way I cut the epochs doesn't make sense. 
-    # I guess I only need whole trials as epochs, 
-    # ideally saved separately by block?
-
-    # Make a figure for each participant's data before and after filtering 
-    # and append to figs_before list:
-    # eeg_figs_before_filtering.append(eeg_Raw.plot_psd(show = False))
-    # eeg_figs_after_filtering.append(eeg_Raw_filt.plot_psd(show = False))
-
-
-    # loop epochs, filter the data, then get rid of bad trials
-    for epoch in epochs: 
-        
-
-        """ 3.4 exclude bad eeg trials """
-        # visual rejection of bad epochs
     
-        fig = eeg_Raw.plot()
-        fig.canvas.key_press_event('a')
-
-        """ exclude bad gss trials """
-
-
-
-
-
+    
+    
 
 
 """ ---------------------- Useful stuff I might need later ------------------------"""
