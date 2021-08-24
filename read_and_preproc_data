@@ -103,7 +103,6 @@ n_jobs = 1
 
 
 """ 1.2.3 set variables for the gss data preproc """
-
 # set filter design
 sensor_fir_design = 'firwin' 
 # set type of window function
@@ -122,16 +121,14 @@ sensor_prestim_cutoff = -1.5
 sensor_poststim_cutoff = 4 
 
 
-""" 1.2.5 Define parameters of ICA """
-
-# Use fast ICA (default in MNE).
-# n_components = Include components based on 
-# how much variance they explain. Use a higher value 
-# (e.g. 0.999) for n_components for Maxwell-filtered data 
-# (we use 0.98 for non-Maxwell-filtered data)
-ica_n_components = 0.98
-ica = ICA(method = 'fastica', 
-          n_components = ica_n_components)
+""" 1.2.5 ICA settings """
+# ICA method is fastICA (= default)
+# use the first 5 components from the PCA (faster computation, no need to look at all 13 channels)
+ica_n_components = 5
+ica_decim = 5 # only use every 5th sample from the data --> speed up computation
+ica_max_iter = "auto" 
+# use a random seed to get the same results every time we run the ICA on the same data
+ica_random_state = 97 
 
 
 # --------------------------------------------------------
@@ -218,7 +215,7 @@ for file_name in file_list:
     eeg_Raw.set_channel_types(mapping = {"EEG_031" : "eog", "EEG_032" : "eog", "EEG_020" : "eog"})
 
 
-    """ 2.2.5 Add Events & GSS data as Annotations to Raw Object"""
+    """ 2.2.5 Add Annotations """
        
     # If you look at the first timestamp of stream 1, 2 & 3, you can see that 
     # they don't match. The EEG for example started recording 
@@ -248,33 +245,30 @@ for file_name in file_list:
     gss_timestamps = streams[3]["time_stamps"] - eeg_onset
     
 
-    # Now get Trigger & GSS values
+    """ Get Triggers & save as Annotations object """
 
     # get names of triggers (it's a nested list in the xdf file)    
     trigger_descriptions = streams[2]["time_series"]
     # turn nested list into "normal" one dimensional list
     trigger_descriptions = list(chain.from_iterable(trigger_descriptions)) 
     
+    # save trigger descriptions & their onsets as annotations for our Raw object
+    triggers_annot = mne.Annotations(onset = trigger_timestamps, duration = .001, description = trigger_descriptions)
+    
+
+    """ Get GSS values & save as Annotations object """
     
     # get gss values (it's a nested list in the xdf file)    
     gss_values = streams[3]["time_series"]
+    
     # turn nested list into "normal" one dimensional list
     gss_values = list(chain.from_iterable(gss_values)) 
-    
-    # save trigger descriptions & their onsets as annotations for our Raw object
-    triggers_annot = mne.Annotations(onset = trigger_timestamps, duration = .001, description = trigger_descriptions)
     
     # save GSS values & their onsets as annotations
     gss_annot = mne.Annotations(onset = gss_timestamps, duration = 0.001, description = gss_values) 
     
-    # there's a bug in MNE, you have to set a filename to be able to use annotations
-    eeg_Raw._filenames = ['dummy_file_name'] 
-   
-    # set annotations
-    #eeg_Raw.set_annotations(triggers_annot + gss_annot)
 
-
-    """ 2.2.6 Detect & annotate blinks """
+    """ 2.2.6 Automatically detect blinks, name "bad blink" & save as Annotations object """
     
     # find_eog_events filters the data before detecting oeg events:
     # FIR two-pass forward and reverse, zero-phase, 
@@ -289,23 +283,31 @@ for file_name in file_list:
     # set duration of blink epoch (500 ms around peak)
     durations = [0.5] * len(eog_events)
     
-    # create description for blinks
-    descriptions = ['bad blink'] * len(eog_events)
+    # create description for blinks 
+    # (all annotations that start with "bad" 
+    # can be automatically rejected later)
+    blink_descriptions = ['bad blink'] * len(eog_events)
     
     # create annotation object for the detected blinks
-    blink_annot = mne.Annotations(onsets, durations, descriptions,
-                              orig_time = eeg_Raw.info['meas_date'])
+    blink_annot = mne.Annotations(onsets, durations, blink_descriptions, 
+                                  orig_time = eeg_Raw.info['meas_date'])
     
-    # set triggers and blinks as annotations
+    """ Set annotations """
+    # there's a bug in MNE, you have to set a filename 
+    # to be able to set annotations:
+    eeg_Raw._filenames = ['dummy_file_name'] 
+
+    # include gss values as annotations:
+    # eeg_Raw.set_annotations(triggers_annot + blink_annot + gss_annot)
+    # only use triggers & blinks, not the gss values:
     eeg_Raw.set_annotations(triggers_annot + blink_annot)
 
 
-
     """ 2.2.5 plot raw data """
-    # (careful, this takes a lot of time!)
+    # (careful, this takes a lot of time if you include the gss values!)
     # I filtered the data a bit, but this is only for the 
     # representation in the plot, it doesn't affect the data!
-    # raw_plot = eeg_Raw.plot(highpass = 13, lowpass = 30, show_scrollbars = True)
+    #raw_plot = eeg_Raw.plot(highpass = 1, lowpass = 35, show_scrollbars = True)
 
     """ save raw data in old_eeg_Raw before preprocessing """
     old_eeg_Raw = eeg_Raw.copy()
@@ -322,7 +324,40 @@ for file_name in file_list:
     eeg_Raw.pick_channels(eeg_channel_picks)
 
 
-    """ 3.2 filter EEG data """
+
+    """ 3.2 ICA to get rid of blinks in the EEG data """
+    
+    # highpass filter the data 
+    # (the quality of the ICA fit is negatively affected by 
+    # low-freq drifts, so this is important!)
+    ica_filt_raw = eeg_Raw.copy()
+    ica_filt_raw.load_data().filter(l_freq = 1., h_freq = None)
+
+    # set up ICA (variables are defined at the beginning of the script)
+    ica = ICA(n_components = ica_n_components, max_iter = ica_max_iter, random_state = ica_random_state)
+
+    # fit ICA
+    ica.fit(ica_filt_raw)
+
+    # check what the ICA captured
+    eeg_Raw.load_data()
+    # ica.plot_sources(ica_filt_raw, show_scrollbars = False)
+    # --> first ICA channel (ICA000) seems to capture the blinks quite well
+    
+    # exclude first ICA component:
+    # (I assume it'll be the 1st ICA channel for all participants)
+    ica.exclude = [0] 
+    # apply ICA to eeg_Raw 
+    ica.apply(eeg_Raw)
+
+
+    # clean up environment a bit
+    del ica_filt_raw, ica_max_iter, ica_random_state, ica_decim, ica
+
+
+
+    """ 3.3 filter EEG data """
+    # (variables are defined at the beginning of the script))
     eeg_Raw.filter(picks = eeg_channel_picks,
                    l_freq = eeg_bandpass_fmin, 
                    h_freq = eeg_bandpass_fmax,   
@@ -331,45 +366,5 @@ for file_name in file_list:
                    fir_design = eeg_fir_design, 
                    n_jobs = n_jobs)
     
-
-    """ get epochs """    
-    # max_force_xxx -> initial maximum grip force of participant
-    # blockn -> Blocks 0 - 3, Block 0 = Training
-
-    # 5 triggers per trial:
-    #    1. epoch_vo_start -> start of epoch (= trial?)
-    #            vo = uni visual, av = audiovisual, ao = uni auditive
-    #    2. baseline -> start jittered Baseline (baseline of what???)
-    #    3. fix_cross
-    #    4. trial_start_sfb_0.3_sfc_0.25 
-    #       -> start feedback, 
-    #        sfb = Skalierung Feedback  
-    #        sfc = prozentuale Maximalkraft (e.g. 0.25%)
-    #    5. end_trial
-
-
-    # create events from annotations
-    # use regular expression to get only trigger values, not gss annotations
-    # the regular expression looks for strings containing b,t,e,f or m at 
-    # the beginning of the string
-    # Also, round strings instead of truncating them so we get unique time values
-    events, event_id = mne.events_from_annotations(eeg_Raw, regexp='(^[btefm]).*$', use_rounding = True)
     
-    
-    
-    
-
-
-""" ---------------------- Useful stuff I might need later ------------------------"""
-
-    
-    # Arduino Sampling Frequency
-    # to get the sampling frequency of the Arduino, I took 400 timestamp values and 
-    # their "neighbors" and calculated the difference to get the mean time that passes between the samples. 
-    # If you divide 1 by this value and round it you get a sampling rate of 45 Hz:   
-    sampling_freq_gss = np.round(1/np.mean(streams[3]["time_stamps"][300:700] - streams[3]["time_stamps"][299:699]))
-
-    # quick check: if you do the same for the EEG timestamps, 
-    # you get 500 as a result, which corresponds to the sampling rate from the xdf info, so this is correct. 
-    #np.round(1/np.mean(streams[1]["time_stamps"][300:700] - streams[1]["time_stamps"][299:699]))
-
+    """ 3.4 Epoching """   
