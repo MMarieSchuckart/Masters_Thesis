@@ -4,7 +4,7 @@
 Analysis for EEG & grip strength sensor (gss) data
 
 Part of Merle's Master Thesis
-Version 1: 12.8.2021
+Version 1: 24.8.2021
 
 """
 #-------------------------------------------------
@@ -39,7 +39,7 @@ import pyxdf
 import mne
 
 # import ICA function
-from mne.preprocessing import ICA, create_eog_epochs
+from mne.preprocessing import ICA, find_eog_events
 
 # glob for getting all files in a directory
 import glob
@@ -52,9 +52,6 @@ import pandas as pd
 
 # For getting means, SDs, sums,...
 import numpy as np
-
-# for getting fractional parts of number (aka ms from the timestamps)
-import math
 
 # for turning nested list into 1D list
 from itertools import chain
@@ -147,8 +144,8 @@ file_list = glob.glob("/Users/merle/Desktop/Masterarbeit/Master_Testdaten/*.xdf"
 subj_n = len(file_list)
 
 # Create empty lists to keep track of plots (before and after filtering)
-eeg_figs_before_filtering = []
-eeg_figs_after_filtering = []
+#eeg_figs_before_filtering = []
+#eeg_figs_after_filtering = []
 
 # loop xdf file names in file_list aka participants:
 for file_name in file_list:
@@ -225,7 +222,7 @@ for file_name in file_list:
    
     # This means I need to include information on when the 
     # Triggers and GSS values started or else MNE assumes 
-    # the streams all started at the same time which is not the case.
+    # the streams all started at the same time, which is not the case.
    
     # If you look at when the streams were created, 
     # you see that they are not 0, which means they're 
@@ -252,6 +249,20 @@ for file_name in file_list:
     # turn nested list into "normal" one dimensional list
     trigger_descriptions = list(chain.from_iterable(trigger_descriptions)) 
     
+    # change trigger descriptions so the trial start descriptions 
+    # contain info on the feedback condition
+    for i in range(len(trigger_descriptions)):
+        trigger_descr = trigger_descriptions[i]    
+        # if trigger name starts with ep (like epoch)...
+        if trigger_descr[0:2] == "ep":
+            #... save feedback condition of the current epoch
+            curr_epoch = trigger_descr[6:-6]
+        # else if the name starts with t (as in trial_start)...    
+        elif trigger_descr[0] == "t":
+            #... concatenate old name and epoch name, divided by an underscore
+            trigger_descriptions[i] = trigger_descr + "_" + curr_epoch 
+
+        
     # save trigger descriptions & their onsets as annotations for our Raw object
     triggers_annot = mne.Annotations(onset = trigger_timestamps, duration = .001, description = trigger_descriptions)
     
@@ -268,11 +279,11 @@ for file_name in file_list:
     gss_annot = mne.Annotations(onset = gss_timestamps, duration = 0.001, description = gss_values) 
     
 
-    """ 2.2.6 Automatically detect blinks, name "bad blink" & save as Annotations object """
+    """ 2.2.6 Automatically detect blinks, name them "bad blink" & save as Annotations object """
     
     # find_eog_events filters the data before detecting oeg events:
     # FIR two-pass forward and reverse, zero-phase, 
-    # non-causal bandpass filter from 1 - 10 Hz with Hann window
+    # non-causal bandpass filter from 1 - 10 Hz with von Hann window
         
     # find all eog events
     eog_events = mne.preprocessing.find_eog_events(eeg_Raw)
@@ -295,7 +306,7 @@ for file_name in file_list:
     """ Set annotations """
     # there's a bug in MNE, you have to set a filename 
     # to be able to set annotations:
-    eeg_Raw._filenames = ['dummy_file_name'] 
+    eeg_Raw._filenames = ['a_random_file_name'] 
 
     # include gss values as annotations:
     # eeg_Raw.set_annotations(triggers_annot + blink_annot + gss_annot)
@@ -351,11 +362,6 @@ for file_name in file_list:
     ica.apply(eeg_Raw)
 
 
-    # clean up environment a bit
-    del ica_filt_raw, ica_max_iter, ica_random_state, ica_decim, ica
-
-
-
     """ 3.3 filter EEG data """
     # (variables are defined at the beginning of the script))
     eeg_Raw.filter(picks = eeg_channel_picks,
@@ -367,4 +373,88 @@ for file_name in file_list:
                    n_jobs = n_jobs)
     
     
-    """ 3.4 Epoching """   
+    """ 3.4 Epoching """    
+
+    # max_force_xxx -> initial maximum grip force of participant
+    # block -> Blocks 0 - 3, Block 0 = Training
+
+    # 5 triggers per trial:
+    #    1. epoch_vo_start -> start of epoch (like sub-block)
+    #            vo = only visual, av = audiovisual, ao = only audio
+    #    2. baseline 
+    #    3. fix_cross
+    #    4. trial_start_sfb_0.3_sfc_0.25
+    #        sfb = scaling feedback  
+    #        sfc = % of max grip force (e.g. 0.25%)
+    #    5. end_trial
+
+    """ get block onsets & crop eeg_Raw to seperate blocks """
+    b0_onset = trigger_timestamps[trigger_descriptions.index("block0")]
+    b1_onset = trigger_timestamps[trigger_descriptions.index("block1")]
+    
+    #save data from block 0 (training)
+    b_test_Raw = eeg_Raw.copy().crop(tmin = b0_onset, tmax = b1_onset)
+    
+    # save data from blocks 1 - 3
+    b_main_Raw = eeg_Raw.copy().crop(tmin = b1_onset)
+   
+    
+    """ create epochs, only use data from blocks 1 - 3 """
+    
+        
+    """ create events from annotations """
+    # use regular expression to look for strings beginning with t (I only need the trial starts)
+    # Also, round strings instead of truncating them so we get unique time values
+    trial_events, trial_event_id = mne.events_from_annotations(b_main_Raw, regexp = '(^[t]).*$', use_rounding = True)    
+       
+    
+    
+    
+    # TO DO: Create metadata as pandas df, 1 column for each trigger  
+
+    # create metadata for each epoch containing information on sfb, sfc and feedback condition
+    #test = pd.DataFrame(data = list(trial_event_id.keys()), columns = len(trial_events))
+      
+    #list(trial_event_id.keys())
+        
+    
+    """ get epochs, apply baseline correction on the fly """
+    # event = trial start, cut from -1.5 to +7           
+    trial_epochs = mne.Epochs(b_main_Raw, trial_events, trial_event_id, 
+                              tmin = - 1.5, tmax = 7, baseline = (-1.5, 0), 
+                              preload = True, event_repeated = "drop",
+                              reject_by_annotation = False) # metadata = pass
+    
+    # plot the epochs (only plot the first 2 or else it gets super messy)
+    trial_epochs.plot(show_scrollbars = True, n_epochs = 2)
+
+
+
+
+
+
+""" analyze GSS data """
+
+# ICA for filtering out heartbeats? 
+# filter gss data
+
+# gss_timestamps
+# gss_values
+
+
+
+
+
+""" ---------------------- Useful stuff I might need later ------------------------"""
+
+    
+# Arduino Sampling Frequency
+# to get the sampling frequency of the Arduino, I took 400 timestamp values and 
+# their "neighbors" and calculated the difference to get the mean time that passes between the samples. 
+# If you divide 1 by this value and round it you get a sampling rate of 45 Hz:   
+sampling_freq_gss = np.round(1/np.mean(streams[3]["time_stamps"][300:700] - streams[3]["time_stamps"][299:699]))
+
+# quick check: if you do the same for the EEG timestamps, 
+# you get 500 as a result, which corresponds to the sampling rate from the xdf info, so this is correct. 
+#np.round(1/np.mean(streams[1]["time_stamps"][300:700] - streams[1]["time_stamps"][299:699]))
+
