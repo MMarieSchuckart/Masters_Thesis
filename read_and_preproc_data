@@ -4,7 +4,7 @@
 Analysis for EEG & grip strength sensor (gss) data
 
 Part of Merle's Master Thesis
-Version 1: 24.8.2021
+Version 1: 12.8.2021
 
 """
 #-------------------------------------------------
@@ -142,6 +142,9 @@ file_list = glob.glob("/Users/merle/Desktop/Masterarbeit/Master_Testdaten/*.xdf"
 
 # set number of subjects as number of xdf files in directory
 subj_n = len(file_list)
+
+# count participants 
+participant = 1
 
 # Create empty lists to keep track of plots (before and after filtering)
 #eeg_figs_before_filtering = []
@@ -408,38 +411,89 @@ for file_name in file_list:
     trial_events, trial_event_id = mne.events_from_annotations(b_main_Raw, regexp = '(^[t]).*$', use_rounding = True)    
        
     
-    
-    
-    # TO DO: Create metadata as pandas df, 1 column for each trigger  
+    """ create metadata for each epoch containing information on sfb, sfc and feedback condition """
 
-    # create metadata for each epoch containing information on sfb, sfc and feedback condition
-    #test = pd.DataFrame(data = list(trial_event_id.keys()), columns = len(trial_events))
-      
-    #list(trial_event_id.keys())
+    epoch_colnames = [f'epoch_{n:03}' for n in range(1, len(list(trial_event_id.keys()))+1)]
+    eeg_epochs_metadata = pd.DataFrame(columns = epoch_colnames)
+    
+    # row 0: feedback condition (ao = audio only, vo = visual only, or av = audiovisual)
+    # row 1: sfb = feedback scaling 
+    # row 2: sfc = % of max grip force
+    
+    row_feedback = [] 
+    row_sfb = []
+    row_sfc = []
+    
+    for key in trial_event_id.keys():
+        # get feedback conditio
+        feedback = key[-2:len(key)]
         
+        # get sfb value (= scaling of feedback)
+        sfb = key[16:20]
+        # if value doesn't have 2 digits after the comma...
+        if sfb[-1] == "_":
+            # remove underscore
+            sfb = sfb[0:-1]
+
+        # same for sfc (= % of max. grip force)
+        sfc = key[-7:-3]
+        # if there's an underscore before the value...
+        if sfc[0] == "_":
+            # remove underscore
+            sfc = sfc[1:len(sfc)]
+
+        # append to the rows, typecast sfb & sfc values to float
+        row_feedback.append(feedback) 
+        row_sfb.append(float(sfb))
+        row_sfc.append(float(sfc))
+
+    # set as rows in the eeg_epochs_metadata df
+    eeg_epochs_metadata.loc[0] = row_feedback
+    eeg_epochs_metadata.loc[1] = row_sfb
+    eeg_epochs_metadata.loc[2] = row_sfc
+
+    # Aaaand I made a mistake, the metadata must have the same 
+    # number of rows as events, but I have the same number of columns as events.
+    # Transpose the whole thing because I'm lazy:
+    eeg_epochs_metadata = eeg_epochs_metadata.transpose()  
+    
+    eeg_epochs_metadata.columns = ["feedback", "sfb", "sfc"]
     
     """ get epochs, apply baseline correction on the fly """
     # event = trial start, cut from -1.5 to +7           
     trial_epochs = mne.Epochs(b_main_Raw, trial_events, trial_event_id, 
                               tmin = - 1.5, tmax = 7, baseline = (-1.5, 0), 
                               preload = True, event_repeated = "drop",
-                              reject_by_annotation = False) # metadata = pass
+                              reject_by_annotation = False, metadata = eeg_epochs_metadata) # metadata = pass
     
     # plot the epochs (only plot the first 2 or else it gets super messy)
     trial_epochs.plot(show_scrollbars = True, n_epochs = 2)
+    
+    # this is how you can select epochs based on the metadata
+    trial_epochs['sfc == 0.25'].plot()
+    
+    # or select multiple values
+    search_values = ['0,25', '.3']
+
+    # more on how to use the metadata: 
+    # https://mne.tools/dev/auto_tutorials/epochs/30_epochs_metadata.html
+
+    # save Raw object & epoched data for each participant in the file 
+    # I set as the working directory at the beginning of the script
+    eeg_Raw.save(fname = "Raw_eeg_participant" + str(participant) + ".fif", fmt = 'single', overwrite = False)
+    trial_epochs.save(fname = "eeg_epochs_participant" + str(participant) + ".fif", fmt = 'single', overwrite = False)
+
+    # next participant!
+    participant =+ 1
 
 
+# END LOOP     
 
 
+# TO DO: 
+# add GSS preproc
+# add / save plots --> use MNE Reports?
 
-
-""" analyze GSS data """
-
-# ICA for filtering out heartbeats? 
-# filter gss data
-
-# gss_timestamps
-# gss_values
 
 
 
