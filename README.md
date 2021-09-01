@@ -20,7 +20,7 @@ The data that I use to write the scripts right now are from a pilot study with a
 * for each participant...
     * read in xdf file with the EEG and GSS data
     * create MNE-Raw-Object containing the EEG data and GSS data and triggers as annotations
-    * Blink detection: 
+    * blink detection: 
         * detect blinks and show segments as annotations
         * fit ICA using eog channels
         * plot ICA & bad blink segments to check if everything worked and they overlap
