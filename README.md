@@ -33,6 +33,7 @@ The data that I use to write the scripts right now are from a pilot study with a
 :warning: &nbsp; TO DO: Filtering & epoching for GSS data 
 --> delete GSS data from annotations and create another MNE-Raw-Object instead
 
+&nbsp;  
 
 ### Stats: 
 * for each participant...
