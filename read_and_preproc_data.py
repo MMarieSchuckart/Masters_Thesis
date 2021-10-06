@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 
-Analysis for EEG & grip strength sensor (gss) data
+Preprocessing for EEG & grip strength sensor (gss) data
 
 Part of Merle's Master Thesis
 Version 1: 12.8.2021
@@ -176,7 +176,6 @@ for file_name in file_list:
     # name and classify channels
     ch_names = [f'EEG_{n:03}' for n in range(1, 129)]
     ch_types = ['eeg'] * 128 
-    n_channels = 126
 
     # combine information 
     info_eeg = mne.create_info(ch_names, 
@@ -212,7 +211,13 @@ for file_name in file_list:
 
 
     """ 2.2.4 change the 3 EEG channels in the face to EOG channel type """
+    # check channel types before converting them to eog:
+    #eeg_Raw.get_channel_types("EEG_020")
+    # convert channel type of the 3 electrodes in question to eog
     eeg_Raw.set_channel_types(mapping = {"EEG_031" : "eog", "EEG_032" : "eog", "EEG_020" : "eog"})
+    # This raises an error message, I don't know why but it works so I don't care rn. 
+    # Check channel type again:
+    #eeg_Raw.get_channel_types("EEG_020")
 
 
     """ 2.2.5 Add Annotations """
@@ -253,25 +258,36 @@ for file_name in file_list:
     trigger_descriptions = list(chain.from_iterable(trigger_descriptions)) 
     
     # change trigger descriptions so the trial start descriptions 
-    # contain info on the feedback condition
+    # contain info on the block & feedback condition
+    
+    # start with block 0:
+    block_nr = "block0"
+
     for i in range(len(trigger_descriptions)):
-        trigger_descr = trigger_descriptions[i]    
+        trigger_descr = trigger_descriptions[i]
+        
+        # check if a new block begins:
+        # If the current trigger starts with "block", but doesn't correspond to the current block,
+        # change name of current block.
+        if trigger_descr[0:5] == "block" and trigger_descr!= block_nr:
+            # save new block name
+            block_nr = trigger_descr   
+        # ELSE (aka if the trigger is not a new block name):
         # if trigger name starts with ep (like epoch)...
-        if trigger_descr[0:2] == "ep":
+        elif trigger_descr[0:2] == "ep":
             #... save feedback condition of the current epoch
             curr_epoch = trigger_descr[6:-6]
         # else if the name starts with t (as in trial_start)...    
         elif trigger_descr[0] == "t":
-            #... concatenate old name and epoch name, divided by an underscore
-            trigger_descriptions[i] = trigger_descr + "_" + curr_epoch 
-
+            #... concatenate trial name and epoch name & block number, divided by an underscore
+            trigger_descriptions[i] = trigger_descr + "_" + curr_epoch + "_" + block_nr
         
     # save trigger descriptions & their onsets as annotations for our Raw object
     triggers_annot = mne.Annotations(onset = trigger_timestamps, duration = .001, description = trigger_descriptions)
     
 
     """ Get GSS values & save as Annotations object """
-    
+    # (I think I don't even need them in these datasets, but better safe than sorry)
     # get gss values (it's a nested list in the xdf file)    
     gss_values = streams[3]["time_series"]
     
@@ -375,11 +391,27 @@ for file_name in file_list:
                    fir_design = eeg_fir_design, 
                    n_jobs = n_jobs)
     
+
+
+
+
+
+
+
+
+
+
+
+
+
     
     """ 3.4 Epoching """    
 
     # max_force_xxx -> initial maximum grip force of participant
-    # block -> Blocks 0 - 3, Block 0 = Training
+    # block -> Blocks 0 - 3
+    # Block 0 = training 
+    # Block 1 & 2 = active condition
+    # Block 3 = passive condition (just watching the stimuli)
 
     # 5 triggers per trial:
     #    1. epoch_vo_start -> start of epoch (like sub-block)
@@ -402,7 +434,19 @@ for file_name in file_list:
     b_main_Raw = eeg_Raw.copy().crop(tmin = b1_onset)
    
     
-    """ create epochs, only use data from blocks 1 - 3 """
+   # --> use tmax as onset of b3
+
+    """ PROBLEM: I need the onset of b3, but I only have training & block 1! """
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    """ create epochs, only use data from blocks 1 & 2 """
     
         
     """ create events from annotations """
@@ -492,7 +536,23 @@ for file_name in file_list:
 
 # TO DO: 
 # add GSS preproc
-# add / save plots --> use MNE Reports?
+# add / save plots
+
+
+
+
+    
+
+
+
+
+    """ analyze GSS data """
+
+    # create raw object + trigger annotations for gss data
+    
+    # ICA for filtering out heartbeats? 
+    
+    # filter gss data
 
 
 
