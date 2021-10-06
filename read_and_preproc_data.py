@@ -4,7 +4,7 @@
 Preprocessing for EEG & grip strength sensor (gss) data
 
 Part of Merle's Master Thesis
-Version 1: 12.8.2021
+Version 1: 06.10.2021
 
 """
 #-------------------------------------------------
