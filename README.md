@@ -1,5 +1,5 @@
 # Merle's Master's Thesis Repo 
-(last updated: September 1st 2021)
+(last updated: October 6th 2021)
 
 This repository is used to collect all the scripts I wrote for my Master's thesis.
 
@@ -26,7 +26,7 @@ The data that I use to write the scripts right now are from a pilot study with a
         * plot ICA & bad blink segments to check if everything worked and they overlap
         * exclude first ICA component to get rid of blinks
         * filter EEG data (FIR bandpass (5-35 Hz) zero-phase hamming filter)
-        * divide data into blocks, get epochs from blocks 1-3 (exclude training) for -1.5 - 7 s around the onset of each trial 
+        * divide data into blocks, get epochs from blocks 1 & 2 (exclude training) for -1.5 - 7 s around the onset of each trial 
 --> use interval of -1.5 - 0 s before trial onset as baseline for baseline correction
     * save epochs and MNE-Raw-Object
 
