@@ -1,16 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-""" Stats script for Merle's Master's Thesis """
-
-    
-# look at the TFR, is there a linear relationship between the 
-# conditions (sfb, sfc & feedback) and the TFR amplitudes
-# The question is: Are there TFR correlates of different processing stages?
-# This script computes the Stats on Betas across Participants
-
-
-"""
+""" Stats script for Merle's Master's Thesis
 
 Stats part for EEG data
 
@@ -55,7 +46,6 @@ from statsmodels.stats.anova import anova_lm
 
 import scipy.sparse
 import pingouin as pg 
-# This doesn't work. Why tho.
 
 #-------------------------------------------------
 
@@ -68,7 +58,7 @@ psd_tmax = 4
 # settings for running the PSD:
 # sampling rate of eeg    
 psd_sfreq = 500
-# # freq range we'd like to look at (I need 5-35, so I added 1 freq at each end)
+# # freq range we'd like to look at (I need 5-35, so I added +1 at each end)
 psd_fmin = 4
 psd_fmax = 36 
 
@@ -93,7 +83,7 @@ os.chdir("/Users/merle/Desktop/Masterarbeit/Master_Testdaten/")
 file_list = glob.glob("/Users/merle/Desktop/Masterarbeit/Master_Testdaten/eeg_epochs*.fif")
 
 # 2.3 create df for power values
-power_vals_all = pd.DataFrame(columns = ["participant", "epoch", "channel", "frequency", "power value"])
+power_vals_all = pd.DataFrame(columns = ["participant", "epoch", "feedback", "sfb", "sfc", "channel", "frequency", "power_value"])
 tmp_df = pd.DataFrame(columns = ["participant", "epoch", "feedback", "sfb", "sfc", "channel", "frequency", "power_value"])
 
 """ 2.4 Loop participants """
@@ -154,7 +144,7 @@ for filename in file_list:
             # the following function returns... 
             # ...the PSD values for each channel (--> saved in object "psds")... 
             # ...for all frequencies (--> saved in object "freqs")... 
-            # for the current epoch
+            # ...for the current epoch
             psds, freqs = mne.time_frequency.psd_array_welch(channel_epoched_data,
                                                              sfreq = psd_sfreq, 
                                                              fmin = psd_fmin, 
@@ -202,7 +192,7 @@ for filename in file_list:
 #power_vals_agg = power_vals_all.groupby(["participant", "sfb", "sfc", "feedback", "channel", "frequency"], as_index = False)["power_value"].mean()
 
 # don't include sfb
-power_vals_agg = power_vals_all.groupby(["participant", "channel", "freq", "sfc_F", "sfc_degr_freedom", "sfc_p", "feedback_F", "feedback_degr_freedom", "feedback_p"], as_index = False)["power_value"].mean()
+power_vals_agg = power_vals_all.groupby(["participant", "channel", "frequency", "sfc", "feedback"], as_index = False)["power_value"].mean()
 
 # create empty dfs for ANOVA results
 tmp_df = pd.DataFrame(columns = ["participant", "channel", "freq", "sfc_F", "sfc_degr_freedom", "sfc_p", "sfc_eta", "feedback_F", "feedback_degr_freedom", "feedback_p", "feedback_eta"])
@@ -273,3 +263,4 @@ for participant in np.unique(power_vals_agg["participant"]):
             # compute ANOVA, get Betas
             # ANOVA again over all subjects
             
+
