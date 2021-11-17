@@ -1,14 +1,14 @@
 # Merle's Master's Thesis Repo 
-(last updated: October 6th 2021)
+(last updated: November 17th 2021)
 
 This repository is used to collect all the scripts I wrote for my Master's thesis.
 
 &nbsp;  
 
 ## Overview 
-This repository only contains a [script for reading in / preprocessing](/read_and_preproc_data.py) test data I got from Julius and another one for the [stats part](/stats.py).
+This repository only contains a [script for reading in / preprocessing](/old_scripts/read_and_preproc_data.py) test data I got from Julius and another one for the [stats part](/stats.py). This script is super long so I'm currently trying to split it up a bit, turn the parts into functions and execute them from a main script. 
 
-This is work in progress (e.g. the analysis of the GSS data is still missing).&nbsp;  🐢
+This is work in progress.&nbsp;  🐢
 
 The data that I use to write the scripts right now are from a pilot study with a patient with Parkinson's disease, it's only a single file that ends somewhere in block 1 (so there's quite a bit missing). There are no real datasets yet, so I haven't tested my script yet.
 
