@@ -14,7 +14,7 @@ The data that I use to write the scripts right now are from a pilot study with a
 
 &nbsp;  
 
-## Functions I call from the [main script](/main.py) 
+## Functions I call from the [main script](/main) 
 
 ### [read_in_EEG(working_directory)](EEG_read_xdf):
 * for each participant...
