@@ -1,0 +1,85 @@
+""" Main Script for Merle's Master's Thesis """
+# Scripts by Merle Schuckart, written Sept. - Dec. 2021 
+# Github: MMarieSchuckart
+# Email: merle.schuckart@gmx.de
+
+# Use this script to run the whole analysis 
+# for Merle's Thesis or just run parts of it.
+
+
+""" Before using this script...
+
+Please make sure the packages MNE and pyxdf can be installed 
+on your machine if you have never used them before.
+You might need to pip install them in your terminal:
+     pip install pyxdf
+     pip install mne
+  
+If you can't pip install the latest stable pyxdf version directly, 
+try installing the latest developer version from github 
+by running this command in your terminal:
+    pip install git+https://github.com/xdf-modules/pyxdf.git
+    
+I found this solution here: https://github.com/xdf-modules/pyxdf
+(BTW: The internet says you should install PyPDF2 to be able to import pyxdf, 
+but that doesn't work.)
+"""  
+
+# Please put your working directory with all .xdf files here.
+# This file should also contain all other analysis scripts 
+# we execute herein.
+working_directory = "your_path"
+
+
+""" ------------ Part 1: EEG DATA ANALYSIS ------------ """
+
+""" 1.1 read in EEG data """
+# Input: Raw EEG data (.xdf file)
+# Output: MNE Raw object for each participant containing 
+#         EEG sensor values + timestamps + triggers as annotations
+# The files from the output are saved in the WD as .fif files.
+
+read_in_EEG(working_directory)
+
+
+""" 1.2 preprocess + plot EEG data """
+# Input: MNE Raw object containing EEG data + triggers (Output from 1.1) 
+# Output: 
+    # MNE Epochs object containing filtered + epoched EEG data (Format: .fif),
+    # Plots: before and after filtering????
+# Settings for Filtering: 
+    
+# Settings for Epoching:
+    
+    
+    
+""" 1.3 stats for EEG data """
+# Input: MNE Epochs object containing filtered + epoched EEG data (Output from 1.2)
+# Output: 
+
+
+
+""" ------------ Part 2: GSS DATA ANALYSIS ------------ """
+
+""" 2.1 read in grip strength sensor (GSS) data """
+# Input: Raw GSS data (.xdf file)
+# Output: MNE Raw object containing 
+#         GSS values + timestamps + triggers as annotations
+# The files from the output are saved in the WD as .fif files.
+
+read_in_GSS(working_directory)
+
+
+""" 2.2 preprocess + plot GSS data """
+# Input: MNE Raw object containing GSS data + triggers (Output from 1.1) 
+# Output: 
+    # MNE Epochs object containing filtered + epoched GSS data (Format: .fif)
+    # Plots: before and after filtering???
+# Settings for Filtering: 
+    
+# Settings for Epoching:
+
+
+
+""" stats for GSS data """
+
