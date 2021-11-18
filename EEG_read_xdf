@@ -45,17 +45,20 @@ def read_in_EEG(working_directory):
     """ 3. get list of all xdf files in my directory """
     # (the asterix in the path means the name of the 
     # file can be anything as long as it has an .xdf ending)
-    file_list = glob.glob(exp_file_path + "*.xdf")
+    file_list = glob.glob(working_directory + "*.xdf")
 
     """ 4. Create empty lists to keep track of plots (before and after filtering)"""
     #eeg_figs_before_filtering = []
     #eeg_figs_after_filtering = []
     
     """ 5. keep track of participants """
-    participant = 1
+    participant = 0
     
     """ 6. loop xdf file names in file_list (aka loop participants): """
     for file_name in file_list:
+        
+        """ save participant number"""
+        participant += 1
         
         """ 6.1 read in XDF data """
         streams, header = pyxdf.load_xdf(file_name)
@@ -232,8 +235,6 @@ def read_in_EEG(working_directory):
         we already stored the xdf files in """
         eeg_Raw.save(fname = "Raw_eeg_participant" + str(participant) + ".fif", fmt = 'single', overwrite = False)
         
-        # next participant!
-        participant += 1
     
     
     ### END LOOP PARTICIPANTS 
@@ -253,4 +254,4 @@ def read_in_EEG(working_directory):
 # working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
 # run function
-# read_in_EEG(working_directory):
+# read_in_EEG(working_directory)
