@@ -11,7 +11,7 @@ Output: .fif file containing EEG data + triggers for each participant
 #-------------------------------------------------
 
 # create function to read in data automatically
-def read_in_EEG(working_directory, exp_files_path):
+def read_in_EEG(working_directory):
 
 
     """ 1. load packages """
@@ -45,7 +45,7 @@ def read_in_EEG(working_directory, exp_files_path):
     """ 3. get list of all xdf files in my directory """
     # (the asterix in the path means the name of the 
     # file can be anything as long as it has an .xdf ending)
-    file_list = glob.glob(exp_file_path + "/*.xdf")
+    file_list = glob.glob(exp_file_path + "*.xdf")
 
     """ 4. Create empty lists to keep track of plots (before and after filtering)"""
     #eeg_figs_before_filtering = []
