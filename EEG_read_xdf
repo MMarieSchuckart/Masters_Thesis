@@ -233,10 +233,24 @@ def read_in_EEG(working_directory):
         eeg_Raw.save(fname = "Raw_eeg_participant" + str(participant) + ".fif", fmt = 'single', overwrite = False)
         
         # next participant!
-        participant =+ 1
+        participant += 1
+    
+    
+    ### END LOOP PARTICIPANTS 
+    
+    """ 7. Create "I'm done!"-message: """
+    if participant == 1:
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I read in " + str(participant) + " xdf-file for you.\nHave a look at the file you set as a \nworking directory in the function call!\n\n- - - - - - - - - - - - - - - - - - - - - ")
         
-    ### END OF LOOP PARTICIPANTS
+    else:
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I read in " + str(participant) + " xdf-files for you.\nHave a look at the file you set as a \nworking directory in the function call!\n\n- - - - - - - - - - - - - - - - - - - - - ")
         
-### END OF FUNCTION        
-        
-        
+### END FUNCTION        
+
+
+""" 8. Bonus: test if function works """
+# set working directory
+# working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+
+# run function
+# read_in_EEG(working_directory):
