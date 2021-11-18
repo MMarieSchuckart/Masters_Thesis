@@ -209,19 +209,23 @@ def read_in_GSS(working_directory):
         gss_Raw.save(fname = "Raw_gss_participant" + str(participant) + ".fif", fmt = 'single', overwrite = False)
     
         # next participant!
-        participant =+ 1
+        participant +=  1
     
     ### END LOOP PARTICIPANTS 
     
+    # Create "I'm done!"-message:
+    if participant == 1:
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I read in " + str(participant) + " xdf-file for you.\nHave a look at the file you set as a \nworking directory in the function call!\n\n- - - - - - - - - - - - - - - - - - - - - ")
+        
+    else:
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I read in " + str(participant) + " xdf-files for you.\nHave a look at the file you set as a \nworking directory in the function call!\n\n- - - - - - - - - - - - - - - - - - - - - ")
+        
 ### END FUNCTION    
 
 
 """ 5. Bonus: test if function works """
 # set working directory
-# wd = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+# working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
 # run function
-# read_in_GSS(wd):
-
-
-
+# read_in_GSS(working_directory):
