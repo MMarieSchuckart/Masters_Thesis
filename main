@@ -33,9 +33,9 @@ working_directory = "your_path"
 
 """ ------ get functions from the other scripts ------ """
 
-from func_read_in_EEG import read_in_EEG
+from EEG_read_xdf import read_in_EEG
 
-from func_read_in_GSS import read_in_GSS
+from GSS_read_xdf import read_in_GSS
 
 
 
