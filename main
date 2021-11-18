@@ -28,12 +28,6 @@ but that doesn't work.)
 
 
 """ import packages """
-# os for setting working directory
-import os
-
-# set working directory for this file
-os.chdir("/Users/merle/Desktop/Masterarbeit/")
-
 
 import sys
 sys.path.append("/Users/merle/Desktop/Masterarbeit/")
