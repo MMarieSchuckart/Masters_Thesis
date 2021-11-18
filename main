@@ -23,12 +23,30 @@ by running this command in your terminal:
 I found this solution here: https://github.com/xdf-modules/pyxdf
 (BTW: The internet says you should install PyPDF2 to be able to import pyxdf, 
 but that doesn't work.)
+
 """  
 
-# Please put your working directory with all .xdf files here.
+
+""" import packages """
+# os for setting working directory
+import os
+
+# set working directory for this file
+os.chdir("/Users/merle/Desktop/Masterarbeit/")
+
+
+import sys
+sys.path.append("/Users/merle/Desktop/Masterarbeit/")
+
+
+
+
+
+
+# Choose file containing your data files.
 # This file should also contain all other analysis scripts with the functions
 # we execute herein.
-working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+data_file = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
 
 """ ------ get functions from the other scripts ------ """
@@ -49,7 +67,7 @@ from GSS_read_xdf import read_in_GSS
 #         EEG sensor values + timestamps + triggers as annotations
 # The files from the output are saved in the WD as .fif files.
 
-read_in_EEG(working_directory)
+read_in_EEG(data_file)
 
 
 """ 1.2 preprocess + plot EEG data """
@@ -77,7 +95,7 @@ read_in_EEG(working_directory)
 #         GSS values + timestamps + triggers as annotations
 # The files from the output are saved in the WD as .fif files.
 
-read_in_GSS(working_directory)
+read_in_GSS(data_file)
 
 
 """ 2.2 preprocess + plot GSS data """
