@@ -26,9 +26,19 @@ but that doesn't work.)
 """  
 
 # Please put your working directory with all .xdf files here.
-# This file should also contain all other analysis scripts 
+# This file should also contain all other analysis scripts with the functions
 # we execute herein.
 working_directory = "your_path"
+
+
+""" ------ get functions from the other scripts ------ """
+
+from func_read_in_EEG import read_in_EEG
+
+from func_read_in_GSS import read_in_GSS
+
+
+
 
 
 """ ------------ Part 1: EEG DATA ANALYSIS ------------ """
