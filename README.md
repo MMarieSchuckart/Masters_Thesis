@@ -6,7 +6,7 @@ This repository is used to collect all the scripts I wrote for my Master's thesi
 &nbsp;  
 
 ## Overview 
-This repository only contains a [script for reading in / preprocessing](/old_scripts/read_and_preproc_data.py) test data I got from Julius and another one for the [stats part](/stats.py). This script is super long so I'm currently trying to split it up a bit, turn the parts into functions and execute them from a main script. 
+This repository only contains a [script for reading in / preprocessing](/old_scripts/read_and_preproc_data.py) test data I got from Julius and another one for the [stats part](/old_scripts/stats.py). The scripts are super long so I'm currently trying to split them up a bit, turn the parts into functions and execute them from a main script. This way I can run the parts independently.
 
 This is work in progress.&nbsp;  🐢
 
@@ -14,7 +14,24 @@ The data that I use to write the scripts right now are from a pilot study with a
 
 &nbsp;  
 
-## Contents of the Scripts
+## Functions I call from the [main script](/main.py) 
+
+### [read_in_EEG(working_directory)](EEG_read_xdf):
+* for each participant...
+    * read in xdf file containing EEG data
+    * create MNE-Raw-Object containing the EEG data with triggers and automatically detected eog events ('bad blinks') as annotations
+    * save each file in the working directory you used as the function's argument
+
+### [read_in_GSS(working_directory)](GSS_read_xdf):
+* for each participant...
+    * read in xdf file containing GSS data
+    * create MNE-Raw-Object containing the GSS data with triggers as annotations
+    * save each file in the working directory you used as the function's argument
+
+(I'll add preprocessing functions and functions for the stats parts later)
+
+
+## Contents of the old scripts
 
 ### Reading in and preprocessing data:
 * for each participant...
