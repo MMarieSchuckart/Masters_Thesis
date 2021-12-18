@@ -1,4 +1,4 @@
-# Merle's Master's Thesis Repo 
+# :sparkles: Merle's Master's Thesis Repo :sparkles:
 (last updated: December 18th 2021)
 
 This repository is used to collect all resources (data, analysis scripts, presentation slides,...) for my Master's Thesis.
