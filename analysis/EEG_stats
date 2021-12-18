@@ -1,4 +1,3 @@
-
 """ Stats script for Merle's Master's Thesis
 
 Stats part for EEG data
@@ -113,8 +112,8 @@ def EEG_stats(working_directory):
     # 2.1 set path to working directory
     os.chdir(working_directory)
     
-    # 2.2 get list of all files in the directory that start with "eeg_epochs" and end with ".fif"
-    file_list = glob.glob(working_directory + "eeg_epochs*.fif")
+    # 2.2 get list of all files in the directory that end with "epo.fif"
+    file_list = glob.glob(working_directory + "*epo.fif")
     
     # 2.3 create df for power values
     power_vals_all = pd.DataFrame(columns = ["participant", "epoch", "feedback", "sfb", "sfc", "channel", "frequency", "power_value"])
@@ -138,7 +137,7 @@ def EEG_stats(working_directory):
             file = file[-2:len(file)]
             
         # 3.1 Read in the epoched data
-        epochs = mne.read_epochs("eeg_epochs_participant"+file+".fif")
+        epochs = mne.read_epochs("eeg_participant"+file+"_epo.fif")
     
         # save name of participant (yes I know I'm using the exact same value twice here)
         part_nr = file
