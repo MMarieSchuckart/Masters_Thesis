@@ -1,4 +1,4 @@
-# Analysis Scripts for Merle's Master's Thesis
+# :closed_book: Analysis Scripts for Merle's Master's Thesis
 (last updated: December 18th 2021)
 
 This repository is used to collect all the scripts I wrote for my Master's thesis.
