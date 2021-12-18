@@ -55,6 +55,7 @@ The data that I use to write the scripts right now are from a pilot study with a
 * for each participant...
     * read in epochs-object
     * get power spectral density (PSD) for each epoch at each channel, then extract power at each frequency --> save as dataframe
+    * get beta coefficients for each participant at each channel & for each frequency
+    * run t-test on beta coefficients for each channel & frequency (aggregate over participants) 
      
-     
-:warning: &nbsp; TO DO: ANOVAs, Analysis of the GSS data
+:warning: &nbsp; TO DO: Analysis of the GSS data
