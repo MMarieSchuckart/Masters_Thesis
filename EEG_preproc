@@ -1,0 +1,251 @@
+"""
+Function for preprocessing EEG data (from fif files)
+
+Part of Merle's Master Thesis
+Version 1: 18.11.2021
+
+Input: File containing .fif files with EEG data + triggers for each participant
+Output: 
+        - .fif file containing MNE epochs object with filtered EEG data
+        - plots:
+            - for each participant...
+                - powerspectrum: data before filtering (over all conditions + blocks)
+                - powerspectrum: data after filtering (over all conditions + blocks)
+
+"""
+#-------------------------------------------------
+
+
+
+#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+
+
+
+
+
+# create function to filter + epoch data automatically
+def EEG_filter_epoching(working_directory, directory_for_plots, 
+                        eeg_fir_design, eeg_window_type, eeg_phase, 
+                        eeg_bandpass_fmin, eeg_bandpass_fmax, n_jobs, 
+                        eeg_prestim_cutoff, eeg_poststim_cutoff, 
+                        eeg_channel_picks, eog_channels):    
+    
+    """ 1. load packages """
+       
+    # Python MNE for eeg data analysis / processing:
+    # NME should be active by default and should already have the 
+    # necessary dependencies included (numpy, scipy, and matplotlib).    
+    import mne
+    
+    # glob for getting all files in a directory:
+    import glob
+    
+    # os for setting working directory:
+    import os
+    
+    # import ICA function
+    from mne.preprocessing import ICA, find_eog_events
+    
+    # pandas for dataframes
+    import pandas as pd
+    
+    """ 2. set working directory """
+    os.chdir(working_directory)
+    
+    """ 3. get list of all .fif files in my directory """
+    # (the asterix in the path means the name of the 
+    # file can be anything as long as it has an .xdf ending)
+    file_list = glob.glob(working_directory + "Raw_eeg_participant" + "*.fif")
+
+    """ 4. Create empty lists to keep track of plots (before and after filtering)"""
+    #eeg_figs_before_filtering = []
+    #eeg_figs_after_filtering = []
+
+    """ 5. keep track of participants """
+    participant = 0
+    
+    """ 6. loop fif file names in file_list (aka loop participants): """
+    for file_name in file_list:
+        
+        """ save participant number"""
+        participant += 1
+        
+        """ 6.1 read in fif file """
+        eeg_Raw = mne.io.read_raw_fif(file_name)
+
+
+        """ 6.2 Preprocessing """
+        # (variables used here are set in the main script)
+    
+        """ 3.1 pick the right channels """
+        # Pick EEG channels
+        eeg_Raw.pick_channels(eeg_channel_picks)
+
+        
+        """ 3.2 ICA to get rid of blinks in the EEG data """
+        # highpass filter the data 
+        # (the quality of the ICA fit is negatively affected by 
+        # low-freq drifts, so this is important!)
+        ica_filt_raw = eeg_Raw.copy()
+        ica_filt_raw.load_data().filter(l_freq = 1., h_freq = None)
+
+        # set up ICA (variables are defined at the beginning of the script)
+        ica = ICA(n_components = ica_n_components, max_iter = ica_max_iter, random_state = ica_random_state)
+
+        # fit ICA
+        ica.fit(ica_filt_raw)
+
+        # check what the ICA captured
+        eeg_Raw.load_data()
+        # ica.plot_sources(ica_filt_raw, show_scrollbars = False)
+        # --> first ICA channel (ICA000) seems to capture the blinks quite well
+    
+        # exclude first ICA component:
+        # (I assume it'll be the 1st ICA channel for all participants)
+        ica.exclude = [0] 
+        # apply ICA to eeg_Raw 
+        ica.apply(eeg_Raw)
+
+
+        """ 3.3 filter EEG data """
+        # (variables are defined at the beginning of the script))
+        eeg_Raw.filter(picks = eeg_channel_picks,
+                       l_freq = eeg_bandpass_fmin, 
+                       h_freq = eeg_bandpass_fmax,   
+                       phase = eeg_phase,
+                       fir_window = eeg_window_type, 
+                       fir_design = eeg_fir_design, 
+                       n_jobs = n_jobs)
+
+        
+        """ 3.4 Epoching """    
+        # max_force_xxx -> initial maximum grip force of participant
+        # block -> Blocks 0 - 3
+        # Block 0 = training 
+        # Block 1 & 2 = active condition
+        # Block 3 = passive condition (just watching the stimuli)
+
+        # 5 triggers per trial:
+        #    1. epoch_vo_start -> start of epoch (like sub-block)
+        #            vo = only visual, av = audiovisual, ao = only audio
+        #    2. baseline 
+        #    3. fix_cross
+        #    4. trial_start_sfb_0.3_sfc_0.25
+        #        sfb = scaling feedback  
+        #        sfc = % of max grip force (e.g. 0.25%)
+        #    5. end_trial
+        
+        
+        """ 6.3.1 Get Triggers & save as Annotations object """
+        
+        # get trigger timestamps and trigger descriptions
+        trigger_descriptions = eeg_Raw.annotations.description.tolist()
+        trigger_timestamps = eeg_Raw.annotations.onset.tolist()    
+    
+        """ get block onsets & crop eeg_Raw to seperate blocks """
+        b0_onset = trigger_timestamps[trigger_descriptions.index("block0")]
+        
+        # if the trigger block1 is in the list of trigger descriptions, save onset.
+        if "block1" in trigger_descriptions:
+            b1_onset = trigger_timestamps[trigger_descriptions.index("block1")]
+            
+        # if the trigger block3 is in the list of trigger descriptions, save onset.
+        if "block3" in trigger_descriptions:
+            b3_onset = trigger_timestamps[trigger_descriptions.index("block3")]
+            
+        #save data from block 0 (training)
+        b_test_Raw = eeg_Raw.copy().crop(tmin = b0_onset, tmax = b1_onset)
+    
+        # save data from blocks 1 - 3
+        if "block3" in trigger_descriptions:
+            b_main_Raw = eeg_Raw.copy().crop(tmin = b1_onset, tmax = b3_onset)
+        else:
+            b_main_Raw = eeg_Raw.copy().crop(tmin = b1_onset)
+
+
+        """ create epochs, only use data from blocks 1 & 2 """
+        
+        """ create events from annotations """
+        # use regular expression to look for strings beginning with t (I only need the trial starts)
+        # Also, round strings instead of truncating them so we get unique time values
+        trial_events, trial_event_id = mne.events_from_annotations(b_main_Raw, regexp = '(^[t]).*$', use_rounding = True)    
+       
+
+
+        """ create metadata for each epoch containing information on sfb, sfc and feedback condition """
+    
+        epoch_colnames = [f'epoch_{n:03}' for n in range(1, len(list(trial_event_id.keys()))+1)]
+        eeg_epochs_metadata = pd.DataFrame(columns = epoch_colnames)
+        
+        # row 0: feedback condition (ao = audio only, vo = visual only, or av = audiovisual)
+        # row 1: sfb = feedback scaling 
+        # row 2: sfc = % of max grip force
+        
+        row_feedback = [] 
+        row_sfb = []
+        row_sfc = []
+        
+        for key in trial_event_id.keys():
+            # get feedback conditio
+            feedback = key[-2:len(key)]
+            
+            # get sfb value (= scaling of feedback)
+            sfb = key[16:20]
+            # if value doesn't have 2 digits after the comma...
+            if sfb[-1] == "_":
+                # remove underscore
+                sfb = sfb[0:-1]
+    
+            # same for sfc (= % of max. grip force)
+            sfc = key[-7:-3]
+            # if there's an underscore before the value...
+            if sfc[0] == "_":
+                # remove underscore
+                sfc = sfc[1:len(sfc)]
+    
+            # append to the rows, typecast sfb & sfc values to float
+            row_feedback.append(feedback) 
+            row_sfb.append(float(sfb))
+            row_sfc.append(float(sfc))
+    
+        # set as rows in the eeg_epochs_metadata df
+        eeg_epochs_metadata.loc[0] = row_feedback
+        eeg_epochs_metadata.loc[1] = row_sfb
+        eeg_epochs_metadata.loc[2] = row_sfc
+    
+        # Aaaand I made a mistake, the metadata must have the same 
+        # number of rows as events, but I have the same number of columns as events.
+        # Transpose the whole thing because I'm lazy:
+        eeg_epochs_metadata = eeg_epochs_metadata.transpose()  
+        
+        eeg_epochs_metadata.columns = ["feedback", "sfb", "sfc"]
+        
+        """ get epochs, apply baseline correction on the fly """
+        # event = trial start, cut from -1.5 to +7           
+        trial_epochs = mne.Epochs(b_main_Raw, trial_events, trial_event_id, 
+                                  tmin = - 1.5, tmax = 7, baseline = (-1.5, 0), 
+                                  preload = True, event_repeated = "drop",
+                                  reject_by_annotation = False, metadata = eeg_epochs_metadata) # metadata = pass
+        
+        # plot the epochs (only plot the first 2 or else it gets super messy)
+        trial_epochs.plot(show_scrollbars = True, n_epochs = 2)
+        
+        # this is how you can select epochs based on the metadata
+        trial_epochs['sfc == 0.25'].plot()
+        
+        # or select multiple values
+        search_values = ['0,25', '.3']
+    
+        # more on how to use the metadata: 
+        # https://mne.tools/dev/auto_tutorials/epochs/30_epochs_metadata.html
+    
+        # save Raw object & epoched data for each participant in the file 
+        # I set as the working directory at the beginning of the script
+        eeg_Raw.save(fname = "Raw_eeg_participant" + str(participant) + ".fif", fmt = 'single', overwrite = False)
+        trial_epochs.save(fname = "eeg_epochs_participant" + str(participant) + ".fif", fmt = 'single', overwrite = False)
+    
+        # next participant!
+        participant =+ 1
+
+
+# END LOOP   
