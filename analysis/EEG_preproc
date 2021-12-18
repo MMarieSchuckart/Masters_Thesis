@@ -76,12 +76,12 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
         """ 6.2 Preprocessing """
         # (variables used here are set in the main script)
     
-        """ 3.1 pick the right channels """
+        """ 6.2.1 pick the right channels """
         # Pick EEG channels
         eeg_Raw.pick_channels(eeg_channel_picks)
 
         
-        """ 3.2 ICA to get rid of blinks in the EEG data """
+        """ 6.2.2 ICA to get rid of blinks in the EEG data """
         # highpass filter the data 
         # (the quality of the ICA fit is negatively affected by 
         # low-freq drifts, so this is important!)
@@ -106,7 +106,7 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
         ica.apply(eeg_Raw)
 
 
-        """ 3.3 filter EEG data """
+        """ 6.2.3 filter EEG data """
         # (variables are defined at the beginning of the script))
         eeg_Raw.filter(picks = eeg_channel_picks,
                        l_freq = eeg_bandpass_fmin, 
@@ -117,7 +117,7 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
                        n_jobs = n_jobs)
 
         
-        """ 3.4 Epoching """    
+        """ 6.2.4 Epoching """    
         # max_force_xxx -> initial maximum grip force of participant
         # block -> Blocks 0 - 3
         # Block 0 = training 
@@ -135,7 +135,7 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
         #    5. end_trial
         
         
-        """ 6.3.1 Get Triggers & save as Annotations object """
+        """ Get Triggers & save as Annotations object """
         
         # get trigger timestamps and trigger descriptions
         trigger_descriptions = eeg_Raw.annotations.description.tolist()
@@ -172,7 +172,9 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
 
         """ create metadata for each epoch containing information on sfb, sfc and feedback condition """
     
+        # create epoch names (--> epoch_001, epoch_002, and so on)
         epoch_colnames = [f'epoch_{n:03}' for n in range(1, len(list(trial_event_id.keys()))+1)]
+        # create empty df for metadata with the epoch names as column names
         eeg_epochs_metadata = pd.DataFrame(columns = epoch_colnames)
         
         # row 0: feedback condition (ao = audio only, vo = visual only, or av = audiovisual)
@@ -184,18 +186,18 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
         row_sfc = []
         
         for key in trial_event_id.keys():
-            # get feedback conditio
-            feedback = key[-2:len(key)]
+            # get feedback condition (ao, vo or av)
+            feedback = key[-9:len(key)-7]
             
-            # get sfb value (= scaling of feedback)
+            # get sfb value (= scaling of feedback; e.g. "0.86")
             sfb = key[16:20]
             # if value doesn't have 2 digits after the comma...
             if sfb[-1] == "_":
                 # remove underscore
                 sfb = sfb[0:-1]
     
-            # same for sfc (= % of max. grip force)
-            sfc = key[-7:-3]
+            # same for sfc (= % of max. grip force; e.g. "0.25")
+            sfc = key[-14:-10]
             # if there's an underscore before the value...
             if sfc[0] == "_":
                 # remove underscore
@@ -226,7 +228,7 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
                                   reject_by_annotation = False, metadata = eeg_epochs_metadata) # metadata = pass
         
         # plot the epochs (only plot the first 2 or else it gets super messy)
-        trial_epochs.plot(show_scrollbars = True, n_epochs = 2)
+        #trial_epochs.plot(show_scrollbars = True, n_epochs = 2)
         
         # this is how you can select epochs based on the metadata:
         #trial_epochs['sfc == 0.25'].plot()
@@ -235,13 +237,23 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
         # more on how to use the metadata: 
         # https://mne.tools/dev/auto_tutorials/epochs/30_epochs_metadata.html
     
-        # save Raw object & epoched data for each participant in the file 
+        """ 7. save Raw object & epoched data for each participant in the file """
         # I set as the working directory at the beginning of the script
-        eeg_Raw.save(fname = "Raw_eeg_participant" + str(participant) + ".fif", fmt = 'single', overwrite = False)
-        trial_epochs.save(fname = "eeg_epochs_participant" + str(participant) + ".fif", fmt = 'single', overwrite = False)
-    
-        # next participant!
-        participant =+ 1
+        trial_epochs.save(fname = "eeg_participant" + str(participant) + "_epo.fif", fmt = 'single', overwrite = False)
 
-    # END LOOP     
+
+    # END LOOP   
+    
+    
+    """ 8. Create "I'm done!"-message: """
+    if participant == 0:
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, something went wrong: I couldn't run the preproc function on any file. Maybe you should have a look at this.\n\n- - - - - - - - - - - - - - - - - - - - - ")
+    
+    elif participant == 1:
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I filtered & epoched 1 file for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the file eeg_participant1_epo.fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
+        
+    else:
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I filtered & epoched " + str(participant) + " files for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the files eeg_participant[number]_epo.fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
+        
+    
 # END FUNCTION
