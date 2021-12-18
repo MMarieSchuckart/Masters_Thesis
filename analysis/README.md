@@ -28,7 +28,19 @@ The data that I use to write the scripts right now are from a pilot study with a
     * create MNE-Raw-Object containing the GSS data with triggers as annotations
     * save each file in the working directory you used as the function's argument
 
-(I'll add preprocessing functions and functions for the stats parts later)
+
+### [EEG_filter_epoching( ... )](EEG_preproc):
+* for each participant...
+    * read in fif file containing EEG data
+    * pick channels (as specified in the function call arguments)
+    * run ICA to get rid of blinks
+    * filter EEG data (as specified in the function call arguments)
+    * change trigger names so they contain information on block + feedback, sfb & sfc conditions
+    * epoch data (as specified in the function call arguments), exclude data from training and block 3
+    * apply baseline correction
+    * save as .fif file in the working directory you used as the function's argument
+
+(I'll add a preprocessing function for the GSS data and functions for the stats parts later)
 
 
 ## Contents of the old scripts
