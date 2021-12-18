@@ -26,7 +26,8 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
                         eeg_fir_design, eeg_window_type, eeg_phase, 
                         eeg_bandpass_fmin, eeg_bandpass_fmax, n_jobs, 
                         eeg_prestim_cutoff, eeg_poststim_cutoff, 
-                        eeg_channel_picks, eog_channels):    
+                        eeg_channel_picks, eog_channels, 
+                        ica_n_components, ica_max_iter, ica_random_state):    
     
     """ 1. load packages """
        
