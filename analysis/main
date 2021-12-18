@@ -27,21 +27,18 @@ but that doesn't work.)
 """  
 
 
-""" import packages """
+""" set working directory """
 
 import sys
+# Choose file containing all analysis scripts as wd
 sys.path.append("/Users/merle/Desktop/Masterarbeit/")
-
-
-
-
 
 
 # Choose file containing your data files.
 # This file should also contain all other analysis scripts with the functions
 # we execute herein.
 data_file = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
-
+directory_for_plots = "/Users/merle/Desktop/Masterarbeit/Plots/"
 
 """ ------ get functions from the other scripts ------ """
 
@@ -49,8 +46,13 @@ from EEG_read_xdf import read_in_EEG
 
 from GSS_read_xdf import read_in_GSS
 
+from EEG_preproc import EEG_filter_epoching
 
+#from GSS_preproc import GSS_filter_epoching
 
+#from EEG_stats import EEG_stats
+
+#from GSS_stats import GSS_stats
 
 
 """ ------------ Part 1: EEG DATA ANALYSIS ------------ """
@@ -69,11 +71,62 @@ read_in_EEG(data_file)
 # Output: 
     # MNE Epochs object containing filtered + epoched EEG data (Format: .fif),
     # Plots: before and after filtering????
-# Settings for Filtering: 
     
-# Settings for Epoching:
+""" Settings for picking channels """
+# channels to pick up signal from auditory cortex: 
+# 65, 1, 69 & the four neighboring electrodes 33, 38, 66 & 68 
+
+# channels to pick up signal from right hand area of motor cortex: 
+# 71 as center + neighboring electrodes 34, 77, 2, 5, 35 & 78
+
+# visual cortex: 108 54 55 109 61 117 118 63    
+
+eeg_channel_picks = ["EEG_065", "EEG_001", "EEG_069",
+                     "EEG_71", "EEG_034", "EEG_077", 
+                     "EEG_002","EEG_005", "EEG_035", 
+                     "EEG_078", "EEG_108", "EEG_54", 
+                     "EEG_55", "EEG_109", "EEG_61", 
+                     "EEG_117", "EEG_118", "EEG_63"]
+
+# choose eog channels (the 3 eeg channels from the face)
+eog_channels = ["EEG_020", "EEG_031", "EEG_032"]
+        
     
-    
+""" Settings for Filtering: """ 
+# set filter type
+# = default option; gives improved attenuation using fewer samples than “firwin2”
+eeg_fir_design = 'firwin' 
+# set type of window function
+eeg_window_type = 'hamming'
+# zero phase filter
+eeg_phase = "zero"
+# highpass filter 
+eeg_bandpass_fmin = 5
+# lowpass filter 
+eeg_bandpass_fmax = 35,
+# set number of runs to run in parallel
+n_jobs = 1
+
+""" ICA Settings """
+# ICA method is fastICA (= default)
+# use the first 5 components from the PCA (faster computation, no need to look at all 13 channels)
+ica_n_components = 5
+ica_decim = 5 # only use every 5th sample from the data --> speed up computation
+ica_max_iter = "auto" 
+# use a random seed to get the same results every time we run the ICA on the same data
+ica_random_state = 97 
+
+""" Settings for Epoching:"""
+eeg_prestim_cutoff = -1.5 
+eeg_poststim_cutoff = 4 
+
+""" run preproc function """    
+EEG_filter_epoching(data_file, directory_for_plots,
+                    eeg_fir_design, eeg_window_type, eeg_phase, eeg_bandpass_fmin, 
+                    eeg_bandpass_fmax, n_jobs, eeg_prestim_cutoff, eeg_poststim_cutoff,
+                    eeg_channel_picks, eog_channels, 
+                    ica_n_components, ica_max_iter, ica_random_state)
+
     
 """ 1.3 stats for EEG data """
 # Input: MNE Epochs object containing filtered + epoched EEG data (Output from 1.2)
@@ -97,11 +150,32 @@ read_in_GSS(data_file)
 # Output: 
     # MNE Epochs object containing filtered + epoched GSS data (Format: .fif)
     # Plots: before and after filtering???
-# Settings for Filtering: 
-    
-# Settings for Epoching:
+
+""" Settings for Filtering: """
+# set filter design
+sensor_fir_design = 'firwin' 
+# set type of window function
+sensor_window_type = 'hamming'
+# highpass filter:
+sensor_bandpass_fmin = 4
+# lowpass filter
+sensor_bandpass_fmax = 12
+# set number of runs to run in parallel
+n_jobs = 1
+
+""" Settings for Epoching: """
+# set cutoffs (in seconds) for epoching:
+# get "4–12 Hz range since this range is where a majority 
+# of the tremor is contained" (Archer et al., 2018)
+sensor_prestim_cutoff = -1.5 
+sensor_poststim_cutoff = 4 
+
+
+""" run preproc function """
+EEG_filter_epoching(data_file, directory_for_plots, sensor_fir_design, 
+                    sensor_window_type, sensor_bandpass_fmin, sensor_bandpass_fmax, 
+                    n_jobs, sensor_prestim_cutoff, sensor_poststim_cutoff)
 
 
 
 """ stats for GSS data """
-
