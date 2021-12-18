@@ -4,7 +4,7 @@
 This repository is used to collect all resources (data, analysis scripts, presentation slides,...) for my Master's Thesis.
 
 ## :closed_book: analysis: 
-contains all scripts for my data analysis
+contains all scripts for my data analysis (more details in the analysis folder README)
 
 ## :green_book: data:
 currently empty - will contain test data (if I'm allowed to share them)
