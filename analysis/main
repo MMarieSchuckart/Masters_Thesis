@@ -50,14 +50,14 @@ from EEG_preproc import EEG_filter_epoching
 
 #from GSS_preproc import GSS_filter_epoching
 
-#from EEG_stats import EEG_stats
+from EEG_stats import EEG_stats
 
 #from GSS_stats import GSS_stats
 
 
 """ ------------ Part 1: EEG DATA ANALYSIS ------------ """
 
-""" 1.1 read in EEG data """
+""" ---- 1.1 READ IN EEG DATA ---- """
 # Input: Raw EEG data (.xdf file)
 # Output: MNE Raw object for each participant containing 
 #         EEG sensor values + timestamps + triggers as annotations
@@ -66,7 +66,7 @@ from EEG_preproc import EEG_filter_epoching
 read_in_EEG(data_file)
 
 
-""" 1.2 preprocess + plot EEG data """
+""" ---- 1.2 PREPROCESS EEG DATA ---- """
 # Input: MNE Raw object containing EEG data + triggers (Output from 1.1) 
 # Output: 
     # MNE Epochs object containing filtered + epoched EEG data (Format: .fif),
@@ -91,7 +91,6 @@ eeg_channel_picks = ["EEG_065", "EEG_001", "EEG_069",
 # choose eog channels (the 3 eeg channels from the face)
 eog_channels = ["EEG_020", "EEG_031", "EEG_032"]
         
-    
 """ Settings for Filtering: """ 
 # set filter type
 # = default option; gives improved attenuation using fewer samples than “firwin2”
@@ -128,15 +127,47 @@ EEG_filter_epoching(data_file, directory_for_plots,
                     ica_n_components, ica_max_iter, ica_random_state)
 
     
-""" 1.3 stats for EEG data """
-# Input: MNE Epochs object containing filtered + epoched EEG data (Output from 1.2)
-# Output: 
+""" ---- 1.3 STATS FOR EEG DATA ---- """
+# Input: MNE Epochs object containing filtered + epoched EEG data (Output from 1.2), Settings for the PSD
+# Output: 1 table with p- & T-values for each channel & frequency
+
+
+""" Settings for power spectral density (PSD) analysis (using Welch's Method) """ 
+
+# settings for cropping the epoch:
+psd_tmin = 1 
+psd_tmax = 4
+
+# settings for running the PSD:
+# sampling rate of eeg    
+psd_sfreq = 500
+# # freq range we'd like to look at (I need 5-35, so I added +1 at each end)
+psd_fmin = 4
+psd_fmax = 36 
+
+# psd_n_fft = 256*6 #??? 
+# 256 is default, but only produces values for each 2nd frequency. 
+# If you multiply by 2, you get roughly each frequency, I guess if 
+# you go high enough, you get perfekt INTs as freqs.
+# If you set n_fft as == len(samples), you get more values aka more freqs.
+psd_n_overlap = 0 
+psd_n_per_seg = None 
+psd_n_jobs = 1
+psd_average = 'mean'
+psd_window = 'hamming'
+
+""" run stats function """  
+EEG_stats(data_file, psd_sfreq, psd_fmin, psd_fmax, 
+          psd_n_overlap, psd_n_per_seg, psd_n_jobs, 
+          psd_average, psd_window)
+
+
 
 
 
 """ ------------ Part 2: GSS DATA ANALYSIS ------------ """
 
-""" 2.1 read in grip strength sensor (GSS) data """
+""" ---- 2.1 READ IN GRIP STRENGTH SENSOR (GSS) DATA ---- """
 # Input: Raw GSS data (.xdf file)
 # Output: MNE Raw object containing 
 #         GSS values + timestamps + triggers as annotations
@@ -145,7 +176,7 @@ EEG_filter_epoching(data_file, directory_for_plots,
 read_in_GSS(data_file)
 
 
-""" 2.2 preprocess + plot GSS data """
+""" ---- 2.2 PREPROCESS GSS DATA ---- """
 # Input: MNE Raw object containing GSS data + triggers (Output from 1.1) 
 # Output: 
     # MNE Epochs object containing filtered + epoched GSS data (Format: .fif)
@@ -178,4 +209,6 @@ EEG_filter_epoching(data_file, directory_for_plots, sensor_fir_design,
 
 
 
-""" stats for GSS data """
+""" ---- STATS FOR GSS DATA ---- """
+# Input: MNE Epochs object containing filtered + epoched GSS data (Output from 2.2)
+# Output: 
