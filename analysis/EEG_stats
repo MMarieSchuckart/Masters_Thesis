@@ -1,55 +1,138 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+""" Main Script for Merle's Master's Thesis """
+# Scripts by Merle Schuckart, written Sept. - Dec. 2021 
+# Github: MMarieSchuckart
+# Email: merle.schuckart@gmx.de
 
-""" Stats script for Merle's Master's Thesis
+# Use this script to run the whole analysis 
+# for Merle's Thesis or just run parts of it.
 
-Stats part for EEG data
 
-Part of Merle's Master Thesis
-Version 1: 25.8.2021
+""" Before using this script...
 
-"""
-#-------------------------------------------------
+Please make sure the packages MNE and pyxdf can be installed 
+on your machine if you have never used them before.
+You might need to pip install them in your terminal:
+     pip install pyxdf
+     pip install mne
+  
+If you can't pip install the latest stable pyxdf version directly, 
+try installing the latest developer version from github 
+by running this command in your terminal:
+    pip install git+https://github.com/xdf-modules/pyxdf.git
+    
+I found this solution here: https://github.com/xdf-modules/pyxdf
+(BTW: The internet says you should install PyPDF2 to be able to import pyxdf, 
+but that doesn't work.)
 
-""" settings """
+"""  
 
-""" 1.1 load packages """
 
-# os for setting working directory
-import os
+""" set working directory """
 
-# glob for getting all files in a directory
-import glob
+import sys
+# Choose file containing all analysis scripts as wd
+sys.path.append("/Users/merle/Desktop/Masterarbeit/")
 
-# Python MNE for eeg data analysis / processing
-# put this into your terminal to install python nme
-    # pip install mne
-# NME should be active by default and should already have the 
-# necessary dependencies (numpy, scipy, and matplotlib).    
-import mne
 
-# for 
-import numpy as np
+# Choose file containing your data files.
+# This file should also contain all other analysis scripts with the functions
+# we execute herein.
+data_file = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+directory_for_plots = "/Users/merle/Desktop/Masterarbeit/Plots/"
 
-# for plotting
-import matplotlib.pyplot as plt
+""" ------ get functions from the other scripts ------ """
 
-# for dataframes as in R
-import pandas as pd
+from EEG_read_xdf import read_in_EEG
 
-# for computing the ANOVAs
-from statsmodels.formula.api import ols
-#from statsmodels.stats.anova import anova_lm
+from GSS_read_xdf import read_in_GSS
 
-# for getting effect sizes
-# run the following bit in your terminal:
+from EEG_preproc import EEG_filter_epoching
 
-import scipy.sparse
-import pingouin as pg 
+#from GSS_preproc import GSS_filter_epoching
 
-#-------------------------------------------------
+from EEG_stats import EEG_stats
 
-""" 1.2 set variables for power spectral density (PSD) analysis using Welch's Method """ 
+#from GSS_stats import GSS_stats
+
+
+""" ------------ Part 1: EEG DATA ANALYSIS ------------ """
+
+""" ---- 1.1 READ IN EEG DATA ---- """
+# Input: Raw EEG data (.xdf file)
+# Output: MNE Raw object for each participant containing 
+#         EEG sensor values + timestamps + triggers as annotations
+# The files from the output are saved in the WD as .fif files.
+
+read_in_EEG(data_file)
+
+
+""" ---- 1.2 PREPROCESS EEG DATA ---- """
+# Input: MNE Raw object containing EEG data + triggers (Output from 1.1) 
+# Output: 
+    # MNE Epochs object containing filtered + epoched EEG data (Format: .fif),
+    # Plots: before and after filtering????
+    
+""" Settings for picking channels """
+# channels to pick up signal from auditory cortex: 
+# 65, 1, 69 & the four neighboring electrodes 33, 38, 66 & 68 
+
+# channels to pick up signal from right hand area of motor cortex: 
+# 71 as center + neighboring electrodes 34, 77, 2, 5, 35 & 78
+
+# visual cortex: 108 54 55 109 61 117 118 63    
+
+eeg_channel_picks = ["EEG_065", "EEG_001", "EEG_069",
+                     "EEG_71", "EEG_034", "EEG_077", 
+                     "EEG_002","EEG_005", "EEG_035", 
+                     "EEG_078", "EEG_108", "EEG_54", 
+                     "EEG_55", "EEG_109", "EEG_61", 
+                     "EEG_117", "EEG_118", "EEG_63"]
+
+# choose eog channels (the 3 eeg channels from the face)
+eog_channels = ["EEG_020", "EEG_031", "EEG_032"]
+        
+""" Settings for Filtering: """ 
+# set filter type
+# = default option; gives improved attenuation using fewer samples than “firwin2”
+eeg_fir_design = 'firwin' 
+# set type of window function
+eeg_window_type = 'hamming'
+# zero phase filter
+eeg_phase = "zero"
+# highpass filter 
+eeg_bandpass_fmin = 5
+# lowpass filter 
+eeg_bandpass_fmax = 35,
+# set number of runs to run in parallel
+n_jobs = 1
+
+""" ICA Settings """
+# ICA method is fastICA (= default)
+# use the first 5 components from the PCA (faster computation, no need to look at all 13 channels)
+ica_n_components = 5
+ica_decim = 5 # only use every 5th sample from the data --> speed up computation
+ica_max_iter = "auto" 
+# use a random seed to get the same results every time we run the ICA on the same data
+ica_random_state = 97 
+
+""" Settings for Epoching:"""
+eeg_prestim_cutoff = -1.5 
+eeg_poststim_cutoff = 4 
+
+""" run preproc function """    
+EEG_filter_epoching(data_file, directory_for_plots,
+                    eeg_fir_design, eeg_window_type, eeg_phase, eeg_bandpass_fmin, 
+                    eeg_bandpass_fmax, n_jobs, eeg_prestim_cutoff, eeg_poststim_cutoff,
+                    eeg_channel_picks, eog_channels, 
+                    ica_n_components, ica_max_iter, ica_random_state)
+
+    
+""" ---- 1.3 STATS FOR EEG DATA ---- """
+# Input: MNE Epochs object containing filtered + epoched EEG data (Output from 1.2), Settings for the PSD
+# Output: 1 table with p- & T-values for each channel & frequency
+
+
+""" Settings for power spectral density (PSD) analysis (using Welch's Method) """ 
 
 # settings for cropping the epoch:
 psd_tmin = 1 
@@ -62,240 +145,70 @@ psd_sfreq = 500
 psd_fmin = 4
 psd_fmax = 36 
 
-# psd_n_fft = 256*6 #??? # 256 is default, but only produces values for each 2nd frequency. If you multiply by 2, you get roughly each frequency, I guess if you go high enough, you get perfekt INTs as freqs
-# If you set n_fft as == len(samples), you get more values aka more freqs
+# psd_n_fft = 256*6 #??? 
+# 256 is default, but only produces values for each 2nd frequency. 
+# If you multiply by 2, you get roughly each frequency, I guess if 
+# you go high enough, you get perfekt INTs as freqs.
+# If you set n_fft as == len(samples), you get more values aka more freqs.
 psd_n_overlap = 0 
 psd_n_per_seg = None 
 psd_n_jobs = 1
 psd_average = 'mean'
 psd_window = 'hamming'
 
-
-
-#-------------------------------------------------
-
-
-working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
-# create function for running EEG stats script
-def EEG_stats(working_directory):
-
-
-    """ settings """
-
-    """ 1.1 load packages """
-
-    # os for setting working directory
-    import os
-
-    # glob for getting all files in a directory
-    import glob
-
-    # Python MNE for eeg data analysis / processing
-    # put this into your terminal to install python nme
-        # pip install mne
-    # NME should be active by default and should already have the 
-    # necessary dependencies (numpy, scipy, and matplotlib).    
-    import mne
-
-    #import numpy as np
-
-    # for dataframes as in R
-    import pandas as pd
-
-    # for computing the ANOVAs
-    from statsmodels.formula.api import ols
-    #from statsmodels.stats.anova import anova_lm
-
-    # for plotting
-    import matplotlib.pyplot as plt
-    
-
-    """ 2. read in data """
-    
-    # 2.1 set path to working directory
-    os.chdir(working_directory)
-    
-    # 2.2 get list of all files in the directory that end with "epo.fif"
-    file_list = glob.glob(working_directory + "*epo.fif")
-    
-    # 2.3 create df for power values
-    power_vals_all = pd.DataFrame(columns = ["participant", "epoch", "feedback", "sfb", "sfc", "channel", "frequency", "power_value"])
-    tmp_df = pd.DataFrame(columns = ["participant", "epoch", "feedback", "sfb", "sfc", "channel", "frequency", "power_value"])
-    
-    
-    
-    """ 3. Stats Loop Nr 1: 
-        compute PSD for each participant, extract Power at each frequency & each channel """
-    
-    
-    """ 3.1  Loop participants"""
-    for filename in file_list:
-        
-        # get participant number from file name string
-        file = filename[-11:-8] # participant numbers can be 1 - 999
-        
-        # correct the number if it has < 3 digits
-        if file[0] == "n":
-            file = file[-1]
-        elif file[0] == "t":
-            file = file[-2:len(file)]
-            
-        # 3.1 Read in the epoched data
-        epochs = mne.read_epochs("eeg_participant"+file+"_epo.fif")
-    
-        # save name of participant (yes I know I'm using the exact same value twice here)
-        part_nr = file
-        
-        # 3.4.2 get power spectrum for each electrode & each epoch, then extract power at each freq
-        
-        """ loop epochs """
-        for pick_epoch in range(0, epochs.__len__()):
-                    
-            # get single epoch, crop to get time interval from second 1 - second 4 
-            single_epoch = epochs[pick_epoch].crop(tmin = psd_tmin, tmax = psd_tmax)
-            
-            # save information converning the trial:
-            # number of epoch 
-            epoch_nr = pick_epoch
-            # feedback condition (= ov, oa, av)
-            feedback = single_epoch._metadata["feedback"].values[0]
-            # sfb condition (= scaling of feedback)
-            sfb = single_epoch._metadata["sfb"].values[0]
-            # sfc condition (= % of max. grip strength)
-            sfc = single_epoch._metadata["sfc"].values[0]
-            
-            # get channel names
-            channels = single_epoch.ch_names
-          
-            # set title of epoch
-            #title = "participant " + file + ", epoch " + str(pick_epoch) + " of " + str(len(epochs.picks))
-            
-            # plot psd (no clue which Method this is, the MNE docs don't want me to know this)
-            #single_epoch.plot_psd(fmin = 5, fmax = 35)
-            
-            """ Loop channels """
-            for channel in range(0, len(channels)):    
-                # get data for the current channel
-                channel_epoched_data = single_epoch._data[0][channel]
-    
-                # save channel name in df
-                channel_nr = single_epoch.ch_names[channel]
-                
-                """compute power spectral density (PSD) analysis using Welch's Method """
-                # the following function returns... 
-                # ...the PSD values for each channel (--> saved in object "psds")... 
-                # ...for all frequencies (--> saved in object "freqs")... 
-                # ...for the current epoch
-                psds, freqs = mne.time_frequency.psd_array_welch(channel_epoched_data,
-                                                                 sfreq = psd_sfreq, 
-                                                                 fmin = psd_fmin, 
-                                                                 fmax = psd_fmax, 
-                                                                 n_fft = len(channel_epoched_data), 
-                                                                 n_overlap = psd_n_overlap, 
-                                                                 n_per_seg = psd_n_per_seg, 
-                                                                 n_jobs = psd_n_jobs, 
-                                                                 average = psd_average, 
-                                                                 window = psd_window)
-                # round frequencies
-                freqs = np.round(freqs, 1)
-    
-                """ loop frequencies """
-                for freq_val in range(0,len(freqs)-1):
-    
-                    # if freq value is an integer...
-                    if freqs[freq_val].is_integer():
-                        # get corresponding value from psds array and add to df
-                        freq = freqs[freq_val] 
-                        psd_val = psds[freq_val]                  
-     
-                        # save nr of participant, nr of epoch, metadata,
-                        # nr of channel, frequency & corresponding power value 
-                        # as temporary 1 row df:
-                        tmp_df.loc[0] = [part_nr, epoch_nr, feedback, sfb, sfc, channel_nr, freq, psd_val]
-                        
-                        # append as new row to dataframe containing the values for all participants:
-                        power_vals_all = power_vals_all.append(tmp_df)
-                    
-                # END loop frequencies    
-            # END loop channels
-        # END loop epochs
-    # END loop participants
-
-
-
-    """ aggregate dataframe """
-        
-    # get the mean amplitude at each channel for each freq
-
-    # include sfb
-    #power_vals_agg = power_vals_all.groupby(["participant", "sfb", "sfc", "feedback", "channel", "frequency"], as_index = False)["power_value"].mean()
-    
-    # don't include sfb
-    #power_vals_agg = power_vals_all.groupby(["participant", "channel", "frequency", "sfc", "feedback"], as_index = False)["power_value"].mean()
-    
-
-
-        
-    """ 4. Stats Loop Nr 2:
-        compute beta coefficients """
-        
-    # create empty dfs for beta coefficients
-    tmp_df = pd.DataFrame(columns = ["participant", "channel", "freq", "beta_feedback", "beta_sfc"])
-    beta_coeffs_res = pd.DataFrame(columns = ["participant", "channel", "freq", "beta_feedback", "beta_sfc"])
-    
-    # loop participants
-    for participant in np.unique(power_vals_all["participant"]):
-        
-        # only get data of the current participant
-        df_participant = power_vals_all[power_vals_all["participant"] == participant]
-        
-        # loop channels:
-        for channel in np.unique(df_participant["channel"]): 
-            # get subset of df with data for the current channel
-            df_channel = df_participant[df_participant["channel"] == channel]
-        
-            # loop frequencies:
-            for freq in np.unique(df_channel["frequency"]): 
-                # get subset of df with data for the current frequency
-                df_freq = df_channel[df_channel["frequency"] == freq]
-        
-                # TO DO: test conditions: sphericity & normality of distribution
-                # --> if not given, rank transform data   
-                    
-                """ Regression Model: power ~ feedback + sfc """
-    
-                # fit model (ols = ordinary least squares; an OLS regression is the same as a linear regression)
-                mod1 = ols(formula = "power_value ~ feedback + sfc", data = df_freq).fit()
-                
-                
-                
-                
-                
-                
-                """ get beta coefficients """
-                # get beta coefficients (model parameters): 
-                # 1st parameter = intercept, 2nd param. = feedback, 3rd param. =  sfc
-                beta_sfc = mod1.params()[2]
-                beta_feedback = mod1.params()[1]
-                
-                # append beta coefficients for current participant, channel & frequency to df
-                tmp_df.loc[0] = [participant, channel, freq, beta_feedback, beta_sfc]
-                beta_coeffs_res = beta_coeffs_res.append(tmp_df) 
-                                      
-               
-    """ 4. Stats Loop Nr 2:
-        for each channel & frequency, compute 1-sample t-test """
-
-        # get list of frequencies and list of channels
-        
+""" run stats function """  
+EEG_stats(data_file, psd_sfreq, psd_fmin, psd_fmax, 
+          psd_n_overlap, psd_n_per_seg, psd_n_jobs, 
+          psd_average, psd_window)
 
 
 
 
 
+""" ------------ Part 2: GSS DATA ANALYSIS ------------ """
 
- """ TO DO:"""
-                # Which PSD Method (Welch or Multitaper)? 
-                # nonparametric PSD method: Periodogram as direct transformation of signal (--> Welch method)?
-                
-    
+""" ---- 2.1 READ IN GRIP STRENGTH SENSOR (GSS) DATA ---- """
+# Input: Raw GSS data (.xdf file)
+# Output: MNE Raw object containing 
+#         GSS values + timestamps + triggers as annotations
+# The files from the output are saved in the WD as .fif files.
+
+read_in_GSS(data_file)
+
+
+""" ---- 2.2 PREPROCESS GSS DATA ---- """
+# Input: MNE Raw object containing GSS data + triggers (Output from 1.1) 
+# Output: 
+    # MNE Epochs object containing filtered + epoched GSS data (Format: .fif)
+    # Plots: before and after filtering???
+
+""" Settings for Filtering: """
+# set filter design
+sensor_fir_design = 'firwin' 
+# set type of window function
+sensor_window_type = 'hamming'
+# highpass filter:
+sensor_bandpass_fmin = 4
+# lowpass filter
+sensor_bandpass_fmax = 12
+# set number of runs to run in parallel
+n_jobs = 1
+
+""" Settings for Epoching: """
+# set cutoffs (in seconds) for epoching:
+# get "4–12 Hz range since this range is where a majority 
+# of the tremor is contained" (Archer et al., 2018)
+sensor_prestim_cutoff = -1.5 
+sensor_poststim_cutoff = 4 
+
+
+""" run preproc function """
+EEG_filter_epoching(data_file, directory_for_plots, sensor_fir_design, 
+                    sensor_window_type, sensor_bandpass_fmin, sensor_bandpass_fmax, 
+                    n_jobs, sensor_prestim_cutoff, sensor_poststim_cutoff)
+
+
+
+""" ---- STATS FOR GSS DATA ---- """
+# Input: MNE Epochs object containing filtered + epoched GSS data (Output from 2.2)
+# Output: 
