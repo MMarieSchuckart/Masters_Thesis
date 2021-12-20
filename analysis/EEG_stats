@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 """ Stats script for Merle's Master's Thesis
 
 Stats part for EEG data
@@ -128,7 +131,8 @@ def EEG_stats(working_directory):
     """ 3.1  Loop participants"""
     for filename in file_list:
         
-        file = filename[-7:-4] # participant numbers can be 1 - 999
+        # get participant number from file name string
+        file = filename[-11:-8] # participant numbers can be 1 - 999
         
         # correct the number if it has < 3 digits
         if file[0] == "n":
@@ -217,23 +221,17 @@ def EEG_stats(working_directory):
         # END loop epochs
     # END loop participants
 
+
+
     """ aggregate dataframe """
-    
-    
-    
-    
+        
     # get the mean amplitude at each channel for each freq
-    
-    
-    
-    
-    
-    
+
     # include sfb
     #power_vals_agg = power_vals_all.groupby(["participant", "sfb", "sfc", "feedback", "channel", "frequency"], as_index = False)["power_value"].mean()
     
     # don't include sfb
-    power_vals_agg = power_vals_all.groupby(["participant", "channel", "frequency", "sfc", "feedback"], as_index = False)["power_value"].mean()
+    #power_vals_agg = power_vals_all.groupby(["participant", "channel", "frequency", "sfc", "feedback"], as_index = False)["power_value"].mean()
     
 
 
@@ -242,14 +240,14 @@ def EEG_stats(working_directory):
         compute beta coefficients """
         
     # create empty dfs for beta coefficients
-    tmp_df = pd.DataFrame(columns = ["participant", "channel", "freq", "sfc_F", "sfc_degr_freedom", "sfc_p", "sfc_eta", "feedback_F", "feedback_degr_freedom", "feedback_p", "feedback_eta"])
-    beta_coeffs_res = pd.DataFrame(columns = ["participant", "channel", "freq", "sfc_F", "sfc_degr_freedom", "sfc_p", "sfc_eta", "feedback_F", "feedback_degr_freedom", "feedback_p", "feedback_eta"])
+    tmp_df = pd.DataFrame(columns = ["participant", "channel", "freq", "beta_feedback", "beta_sfc"])
+    beta_coeffs_res = pd.DataFrame(columns = ["participant", "channel", "freq", "beta_feedback", "beta_sfc"])
     
     # loop participants
-    for participant in np.unique(power_vals_agg["participant"]):
+    for participant in np.unique(power_vals_all["participant"]):
         
-        # only get aggregated data of the current participant
-        df_participant = power_vals_agg[power_vals_agg["participant"] == participant]
+        # only get data of the current participant
+        df_participant = power_vals_all[power_vals_all["participant"] == participant]
         
         # loop channels:
         for channel in np.unique(df_participant["channel"]): 
@@ -268,6 +266,11 @@ def EEG_stats(working_directory):
     
                 # fit model (ols = ordinary least squares; an OLS regression is the same as a linear regression)
                 mod1 = ols(formula = "power_value ~ feedback + sfc", data = df_freq).fit()
+                
+                
+                
+                
+                
                 
                 """ get beta coefficients """
                 # get beta coefficients (model parameters): 
