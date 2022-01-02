@@ -1,81 +1,47 @@
-
 """ Stats script for Merle's Master's Thesis
 
 Stats part for EEG data
 
 Part of Merle's Master Thesis
-Version 1: 25.8.2021
+Version 1: 02.01.2022
 
 """
-#-------------------------------------------------
 
-""" settings """
-
-""" 1.1 load packages """
-
-# os for setting working directory
-import os
-
-# glob for getting all files in a directory
-import glob
-
-# Python MNE for eeg data analysis / processing
-# put this into your terminal to install python nme
-    # pip install mne
-# NME should be active by default and should already have the 
-# necessary dependencies (numpy, scipy, and matplotlib).    
-import mne
-
-# for 
-import numpy as np
-
-# for plotting
-import matplotlib.pyplot as plt
-
-# for dataframes as in R
-import pandas as pd
-
-# for computing the ANOVAs
-from statsmodels.formula.api import ols
-#from statsmodels.stats.anova import anova_lm
-
-# for getting effect sizes
-# run the following bit in your terminal:
-
-import scipy.sparse
-import pingouin as pg 
 
 #-------------------------------------------------
 
-""" 1.2 set variables for power spectral density (PSD) analysis using Welch's Method """ 
+""" Settings for power spectral density (PSD) analysis using Welch's Method """ 
 
 # settings for cropping the epoch:
-psd_tmin = 1 
-psd_tmax = 4
+#psd_tmin = 1 
+#psd_tmax = 4
 
 # settings for running the PSD:
 # sampling rate of eeg    
-psd_sfreq = 500
+#psd_sfreq = 500
 # # freq range we'd like to look at (I need 5-35, so I added +1 at each end)
-psd_fmin = 4
-psd_fmax = 36 
+#psd_fmin = 4
+#psd_fmax = 36 
 
 # psd_n_fft = 256*6 #??? # 256 is default, but only produces values for each 2nd frequency. If you multiply by 2, you get roughly each frequency, I guess if you go high enough, you get perfekt INTs as freqs
 # If you set n_fft as == len(samples), you get more values aka more freqs
-psd_n_overlap = 0 
-psd_n_per_seg = None 
-psd_n_jobs = 1
-psd_average = 'mean'
-psd_window = 'hamming'
+#psd_n_overlap = 0 
+#psd_n_per_seg = None 
+#psd_n_jobs = 1
+#psd_average = 'mean'
+#psd_window = 'hamming'
 
 
 
 #-------------------------------------------------
 
 
-working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+
 # create function for running EEG stats script
-def EEG_stats(working_directory):
+def EEG_stats(working_directory, psd_sfreq, psd_fmin, psd_fmax, psd_tmin, psd_tmax,
+              psd_n_overlap, psd_n_per_seg, psd_n_jobs, 
+              psd_average, psd_window):
 
 
     """ settings """
@@ -95,18 +61,25 @@ def EEG_stats(working_directory):
     # necessary dependencies (numpy, scipy, and matplotlib).    
     import mne
 
-    #import numpy as np
+    # for rounding frequency values
+    import numpy as np
 
     # for dataframes as in R
     import pandas as pd
 
-    # for computing the ANOVAs
-    from statsmodels.formula.api import ols
-    #from statsmodels.stats.anova import anova_lm
+    # for computing the multiple linear regression & getting beta values
+    import statsmodels.formula.api as smf
+    
+    # import function for 1-sample t-test
+    from scipy.stats import ttest_1samp
+
+    # function for false detection rate (FDR) correction
+    from statsmodels.stats.multitest import fdrcorrection as fdr
 
     # for plotting
     import matplotlib.pyplot as plt
-    
+
+
 
     """ 2. read in data """
     
@@ -217,6 +190,7 @@ def EEG_stats(working_directory):
                 # END loop frequencies    
             # END loop channels
         # END loop epochs
+        print(" -- finished computing betas for participant " + str(file) + " -- ")
     # END loop participants
 
 
@@ -232,18 +206,17 @@ def EEG_stats(working_directory):
     #power_vals_agg = power_vals_all.groupby(["participant", "channel", "frequency", "sfc", "feedback"], as_index = False)["power_value"].mean()
     
 
-
         
-    """ 4. Stats Loop Nr 2:
-        compute beta coefficients """
+    """ 4. Stats Loop Nr 2: Loop participants, channels & frequencies
+    --> compute beta coefficients """
         
     # create empty dfs for beta coefficients
-    tmp_df = pd.DataFrame(columns = ["participant", "channel", "freq", "beta_feedback", "beta_sfc"])
-    beta_coeffs_res = pd.DataFrame(columns = ["participant", "channel", "freq", "beta_feedback", "beta_sfc"])
+    tmp_df = pd.DataFrame(columns = ["participant", "channel", "freq", "beta_feedback_vo", "beta_feedback_va", "beta_sfc"])
+    beta_coeffs_res = pd.DataFrame(columns = ["participant", "channel", "freq", "beta_feedback_vo", "beta_feedback_va", "beta_sfc"])
     
     # loop participants
     for participant in np.unique(power_vals_all["participant"]):
-        
+
         # only get data of the current participant
         df_participant = power_vals_all[power_vals_all["participant"] == participant]
         
@@ -261,39 +234,91 @@ def EEG_stats(working_directory):
                 # --> if not given, rank transform data   
                     
                 """ Regression Model: power ~ feedback + sfc """
-    
+
                 # fit model (ols = ordinary least squares; an OLS regression is the same as a linear regression)
-                mod1 = ols(formula = "power_value ~ feedback + sfc", data = df_freq).fit()
+                lm = smf.ols(formula='power_value ~ feedback + sfc', data = df_freq).fit()
                 
-                
-                
-                
-                
-                
-                """ get beta coefficients """
-                # get beta coefficients (model parameters): 
+                # get beta coefficients (model parameters) for feedback and sfc:
                 # 1st parameter = intercept, 2nd param. = feedback, 3rd param. =  sfc
-                beta_sfc = mod1.params()[2]
-                beta_feedback = mod1.params()[1]
+                intercept, beta_feedback_va, beta_feedback_vo, beta_sfc = lm.params
+                                        
+                # beta coefficients indicate if there's a relationship between 
+                # dependent variable (power value) and independent variables (feedback & sfc) 
+                # If yes: beta ≠ 0, if no: beta = 0
                 
                 # append beta coefficients for current participant, channel & frequency to df
-                tmp_df.loc[0] = [participant, channel, freq, beta_feedback, beta_sfc]
+                tmp_df.loc[0] = [participant, channel, freq, beta_feedback_vo, beta_feedback_va, beta_sfc]
                 beta_coeffs_res = beta_coeffs_res.append(tmp_df) 
                                       
                
-    """ 4. Stats Loop Nr 2:
-        for each channel & frequency, compute 1-sample t-test """
+    """ 4. Stats Loop Nr 2: Loop channels & frequencies in beta_coeffs_res (--> aggregate over all participants)
+    --> compute 1-sample t-test """
 
-        # get list of frequencies and list of channels
-        
-
-
-
-
-
-
- """ TO DO:"""
-                # Which PSD Method (Welch or Multitaper)? 
-                # nonparametric PSD method: Periodogram as direct transformation of signal (--> Welch method)?
-                
+    # get list of frequencies and list of channels
+    freqs = set(list(beta_coeffs_res["freq"])) 
+    channels = set(list(beta_coeffs_res["channel"])) 
+     
     
+    # prepare empty dfs to save the results from the t-tests:
+    tmp_df = pd.DataFrame(columns = ["channel", "freq", "p_feedback_vo", "T_feedback_vo",
+                                     "p_feedback_va", "T_feedback_va", "p_sfc", "T_sfc"])
+    
+    t_test_results = pd.DataFrame(columns = ["channel", "freq", "p_feedback_vo", "T_feedback_vo",
+                                             "p_feedback_va", "T_feedback_va", "p_sfc", "T_sfc"])
+    
+    # loop channels:
+    for channel in channels:
+        
+        # loop frequencies
+        for freq in freqs:
+
+             # get subset of df where channel == current channel & freq == current frequency
+             tmp_betas = beta_coeffs_res[(beta_coeffs_res["channel"] == channel) & (beta_coeffs_res["freq"] == freq)]
+
+
+
+             """ TO DO: test conditions for running t-tests """
+
+
+
+
+             # run t-tests:
+             # for feedback vo
+             p_feedback_vo = ttest_1samp(tmp_betas["beta_feedback_vo"], 0, axis=0, alternative='two-sided').pvalue
+             T_feedback_vo = ttest_1samp(tmp_betas["beta_feedback_vo"], 0, axis=0, alternative='two-sided').statistic
+             
+             # for feedback va
+             p_feedback_va = ttest_1samp(tmp_betas["beta_feedback_va"], 0, axis=0, alternative='two-sided').pvalue
+             T_feedback_va = ttest_1samp(tmp_betas["beta_feedback_va"], 0, axis=0, alternative='two-sided').statistic
+             
+             # for sfc
+             p_sfc = ttest_1samp(tmp_betas["beta_sfc"], 0, axis=0, alternative='two-sided').pvalue
+             T_sfc = ttest_1samp(tmp_betas["beta_sfc"], 0, axis=0, alternative='two-sided').statistic
+             
+
+             # save results in df
+             # append beta coefficients for current participant, channel & frequency to df
+             tmp_df.loc[0] = [channel, freq, 
+                              p_feedback_vo, T_feedback_vo,
+                              p_feedback_va, T_feedback_va,
+                              p_sfc, T_sfc]
+            
+             t_test_results = t_test_results.append(tmp_df) 
+             
+
+             # False Detection Rate (FDR) Correction to correct for multiple comparisons
+             # concerning the method argument: 
+             # indep = Benjamini/Hochberg for independent or positively correlated tests (default)
+
+             t_test_results["p_feedback_vo"] = fdr(t_test_results["p_feedback_vo"], alpha = 0.05, method='indep', is_sorted=False)[1]
+             t_test_results["p_feedback_va"] = fdr(t_test_results["p_feedback_va"], alpha = 0.05, method='indep', is_sorted=False)[1]
+             t_test_results["p_sfc"] = fdr(t_test_results["p_sfc"], alpha = 0.05, method='indep', is_sorted=False)[1]
+
+             
+
+            
+
+""" TO DO:"""
+# Which PSD Method (Welch or Multitaper)? 
+# nonparametric PSD method: Periodogram as direct transformation of signal (--> Welch method)?
+     
