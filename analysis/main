@@ -1,5 +1,5 @@
 """ Main Script for Merle's Master's Thesis """
-# Scripts by Merle Schuckart, written Sept. 2021 - Jan. 2022 
+# Scripts by Merle Schuckart, written Sept. - Dec. 2021 
 # Github: MMarieSchuckart
 # Email: merle.schuckart@gmx.de
 
@@ -86,9 +86,10 @@ read_in_EEG(data_file)
 # visual cortex: 108 54 55 109 61 117 118 63    
 
 eeg_channel_picks = ["EEG_065", "EEG_001", "EEG_069",
+                     "EEG_033", "EEG_038", "EEG_066", "EEG_068",
                      "EEG_71", "EEG_034", "EEG_077", 
-                     "EEG_002","EEG_005", "EEG_035", 
-                     "EEG_078", "EEG_108", "EEG_54", 
+                     "EEG_002","EEG_005", "EEG_035", "EEG_078", 
+                     "EEG_108", "EEG_54", 
                      "EEG_55", "EEG_109", "EEG_61", 
                      "EEG_117", "EEG_118", "EEG_63"]
 
