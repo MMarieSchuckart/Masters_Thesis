@@ -1,5 +1,5 @@
 """ Main Script for Merle's Master's Thesis """
-# Scripts by Merle Schuckart, written Sept. - Dec. 2021 
+# Scripts by Merle Schuckart, written Sept. 2021 - Jan. 2022 
 # Github: MMarieSchuckart
 # Email: merle.schuckart@gmx.de
 
@@ -26,7 +26,7 @@ but that doesn't work.)
 
 """  
 
-
+#%%
 """ set working directory """
 
 import sys
@@ -40,6 +40,8 @@ sys.path.append("/Users/merle/Desktop/Masterarbeit/")
 data_file = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 directory_for_plots = "/Users/merle/Desktop/Masterarbeit/Plots/"
 
+
+#%%
 """ ------ get functions from the other scripts ------ """
 
 from EEG_read_xdf import read_in_EEG
@@ -55,6 +57,7 @@ from EEG_stats import EEG_stats
 #from GSS_stats import GSS_stats
 
 
+#%%
 """ ------------ Part 1: EEG DATA ANALYSIS ------------ """
 
 """ ---- 1.1 READ IN EEG DATA ---- """
@@ -66,6 +69,7 @@ from EEG_stats import EEG_stats
 read_in_EEG(data_file)
 
 
+#%%
 """ ---- 1.2 PREPROCESS EEG DATA ---- """
 # Input: MNE Raw object containing EEG data + triggers (Output from 1.1) 
 # Output: 
@@ -126,7 +130,8 @@ EEG_filter_epoching(data_file, directory_for_plots,
                     eeg_channel_picks, eog_channels, 
                     ica_n_components, ica_max_iter, ica_random_state)
 
-    
+ 
+#%%   
 """ ---- 1.3 STATS FOR EEG DATA ---- """
 # Input: MNE Epochs object containing filtered + epoched EEG data (Output from 1.2), Settings for the PSD
 # Output: 1 table with p- & T-values for each channel & frequency
@@ -157,14 +162,13 @@ psd_average = 'mean'
 psd_window = 'hamming'
 
 """ run stats function """  
-EEG_stats(data_file, psd_sfreq, psd_fmin, psd_fmax, 
+EEG_stats(data_file, psd_sfreq, psd_fmin, psd_fmax, psd_tmin, psd_tmax,
           psd_n_overlap, psd_n_per_seg, psd_n_jobs, 
           psd_average, psd_window)
 
 
 
-
-
+#%%
 """ ------------ Part 2: GSS DATA ANALYSIS ------------ """
 
 """ ---- 2.1 READ IN GRIP STRENGTH SENSOR (GSS) DATA ---- """
@@ -176,6 +180,7 @@ EEG_stats(data_file, psd_sfreq, psd_fmin, psd_fmax,
 read_in_GSS(data_file)
 
 
+#%%
 """ ---- 2.2 PREPROCESS GSS DATA ---- """
 # Input: MNE Raw object containing GSS data + triggers (Output from 1.1) 
 # Output: 
@@ -208,7 +213,7 @@ EEG_filter_epoching(data_file, directory_for_plots, sensor_fir_design,
                     n_jobs, sensor_prestim_cutoff, sensor_poststim_cutoff)
 
 
-
+#%%
 """ ---- STATS FOR GSS DATA ---- """
 # Input: MNE Epochs object containing filtered + epoched GSS data (Output from 2.2)
 # Output: 
