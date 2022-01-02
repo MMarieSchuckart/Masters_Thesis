@@ -1,5 +1,5 @@
 # :sparkles: Merle's Master's Thesis Repo :sparkles:
-(last updated: December 18th 2021)
+(last updated: January 1nd 2022)
 
 Ladies and Gentlemen, I present to you: All data, scripts, presentation slides and drafts for my Master's Thesis.
 
