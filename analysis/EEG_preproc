@@ -16,11 +16,6 @@ Output:
 #-------------------------------------------------
 
 
-
-#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
-
-
-
 # create function to filter + epoch data automatically
 def EEG_filter_epoching(working_directory, directory_for_plots, 
                         eeg_fir_design, eeg_window_type, eeg_phase, 
@@ -42,7 +37,9 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
     # os for setting working directory:
     import os
     
-    # import ICA function
+    # import ICA function 
+    # (btw: Spyder says "find_eog_events" is unused but 
+    # I use it to find blinks, so ignore this)
     from mne.preprocessing import ICA, find_eog_events
     
     # pandas for dataframes
@@ -67,7 +64,17 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
     for file_name in file_list:
         
         """ save participant number"""
-        participant += 1
+        # the participant numbers in file list are in the wrong order
+        # so get the number from the filename instead of the loop index number
+
+        participant = file_name[-7:-4]
+        
+        # if participant number has < 2 or 3 digits, shorten the number
+        if participant[0] == "n":
+            participant = participant[-1]
+        elif participant[0] == "t":
+            participant = participant[-2:]
+        
         
         """ 6.1 read in fif file """
         eeg_Raw = mne.io.read_raw_fif(file_name)
