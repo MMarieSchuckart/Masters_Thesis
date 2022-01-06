@@ -2,7 +2,7 @@
 Function for reading in EEG xdf files
 
 Part of Merle's Master Thesis
-Version 1: 12.8.2021
+Version 1: 06.01.2021
 
 Input: File containing .xdf files with EEG data for each participant
 Output: .fif file containing EEG data + triggers for each participant
@@ -36,6 +36,9 @@ def read_in_EEG(working_directory):
     # chain for turning nested list into 1D list:
     from itertools import chain
     
+    # for finding EOG events / plotting EOG epochs    
+    from mne.preprocessing import find_eog_events
+    from mne.preprocessing import create_eog_epochs
     
     # --------------------------------------------------------
 
@@ -200,7 +203,7 @@ def read_in_EEG(working_directory):
         # non-causal bandpass filter from 1 - 10 Hz with von Hann window
             
         """ 6.4.1 find all eog events """
-        eog_events = mne.preprocessing.find_eog_events(eeg_Raw)
+        eog_events = find_eog_events(eeg_Raw)
         
         # set onset as 250 ms before the peak of the blink
         onsets = eog_events[:, 0] / eeg_Raw.info['sfreq'] - 0.25
@@ -227,9 +230,19 @@ def read_in_EEG(working_directory):
     
     
         """ 6.7 plot raw data """
+        # Plot raw data with EOG events
         # I filtered the data a bit, but this is only for the 
         # representation in the plot, it doesn't affect the data!
-        #raw_plot = eeg_Raw.plot(highpass = 1, lowpass = 35, show_scrollbars = True)
+        #raw_plot = eeg_Raw.plot(n_channels = 6, highpass = 5, duration = 8, lowpass = 35, show_scrollbars = True)
+
+        # Plot EOG events as butterfly plot        
+        # find EOG epochs,create new eog object
+        #eog_evoked = create_eog_epochs(eeg_Raw).average()
+        # baseline correct data
+        #eog_evoked.apply_baseline(baseline = (None, -0.2))
+        # plot EOG events as butterfly plot (all events in one plot)
+        #eog_evoked.plot_joint()
+
 
         """ 6.8 save Raw object containing EEG data in the file 
         we already stored the xdf files in """
@@ -258,3 +271,4 @@ def read_in_EEG(working_directory):
 
 # run function
 # read_in_EEG(working_directory)
+
