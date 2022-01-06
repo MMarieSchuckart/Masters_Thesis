@@ -2,7 +2,7 @@
 Function for preprocessing EEG data (from fif files)
 
 Part of Merle's Master Thesis
-Version 1: 18.11.2021
+Version 1: 06.01.2021
 
 Input: File containing .fif files with EEG data + triggers for each participant
 Output: 
@@ -15,6 +15,7 @@ Output:
 """
 #-------------------------------------------------
 
+#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
 # create function to filter + epoch data automatically
 def EEG_filter_epoching(working_directory, directory_for_plots, 
@@ -38,9 +39,7 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
     import os
     
     # import ICA function 
-    # (btw: Spyder says "find_eog_events" is unused but 
-    # I use it to find blinks, so ignore this)
-    from mne.preprocessing import ICA, find_eog_events
+    from mne.preprocessing import ICA
     
     # pandas for dataframes
     import pandas as pd
@@ -103,7 +102,7 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
 
         # check what the ICA captured
         eeg_Raw.load_data()
-        # ica.plot_sources(ica_filt_raw, show_scrollbars = False)
+        # ica.plot_sources(ica_filt_raw, show_scrollbars = True)
         # --> first ICA channel (ICA000) seems to capture the blinks quite well
     
         # exclude first ICA component:
@@ -264,3 +263,4 @@ def EEG_filter_epoching(working_directory, directory_for_plots,
         
     
 # END FUNCTION
+
