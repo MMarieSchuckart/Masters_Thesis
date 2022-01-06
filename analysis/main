@@ -40,7 +40,6 @@ sys.path.append("/Users/merle/Desktop/Masterarbeit/")
 data_file = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 directory_for_plots = "/Users/merle/Desktop/Masterarbeit/Plots/"
 
-
 #%%
 """ ------ get functions from the other scripts ------ """
 
@@ -94,7 +93,10 @@ eeg_channel_picks = ["EEG_065", "EEG_001", "EEG_069",
                      "EEG_117", "EEG_118", "EEG_63"]
 
 # choose eog channels (the 3 eeg channels from the face)
-eog_channels = ["EEG_020", "EEG_031", "EEG_032"]
+#eog_channels = ["EEG_020", "EEG_031", "EEG_032"] 
+# first two are for left eye, second two are for right eye:
+eog_channels = ["EEG_031", "EEG_021", 
+                "EEG_032", "EEG_026"]
         
 """ Settings for Filtering: """ 
 # set filter type
