@@ -61,13 +61,13 @@ The data that I use to write the scripts right now are from a pilot study with a
     * for each epoch & channel, compute PSD
     * extract Power value for each epoch, channel & frequency
     * add information on participant, sfb, sfc and feedback condition and save as df
-    * for each participant, channel and frequency, compute OLS regression: power ~ feedback + sfc
+* for each participant, channel and frequency, compute OLS regression: power ~ feedback + sfc
     * get betas for feedback & sfc, save in df with information on participant, channel and frequency
-    * for each channel & frequency, compute t-test against 0 (1 t-test for feedback, 1 t-test for sfc)
+* for each channel & frequency, compute t-test against 0 (1 t-test for feedback, 1 t-test for sfc)
     * save p- & T-vales in df with information on channel & frequency
     * apply false detection rate correction on the p-values
-    * TO DO: plot the p-values
-    * TO DO: save as .csv file in the working directory you used as the function's argument
+* TO DO: plot the p-values
+* TO DO: save as .csv file in the working directory you used as the function's argument
 
 (I'll add functions for the GSS stats parts later)
 
