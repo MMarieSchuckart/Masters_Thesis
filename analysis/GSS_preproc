@@ -13,8 +13,8 @@ Output:
                 - powerspectrum: data after filtering (over all conditions + blocks)
 """
 
-#-------------------------------------------------
-working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+#%% 
+#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
 # create function to filter + epoch data automatically
 def GSS_filter_epoching(working_directory, directory_for_plots):
@@ -49,7 +49,7 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
     # import ICA function 
     from sklearn.decomposition import FastICA
     
-    
+    #%% 
     """ 2. set working directory """
     os.chdir(working_directory)
     
@@ -65,6 +65,7 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
     """ 5. keep track of participants """
     participant = 0
     
+   #%%  
     """ 6. loop fif file names in file_list (aka loop participants): """
     for file_name in file_list:
         
@@ -95,7 +96,7 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
         #plt.plot(time_vect, gss_values)
         #plt.show()
     
-    
+ #%%    
         """ 6.2 Preprocessing """
         # (variables used here are set in the main script)
 
@@ -147,126 +148,58 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
         #                               log_y = True)
  
     
- 
-        """ 6.2.2 Turn IMFs into MNE RAW object again"""
- 
-        # we can use the gss_Raw object we already have
-        
-        # copy gss_Raw object
-        gss_emd_Raw = gss_Raw.copy()
- 
-        # now delete the channel with the original 
-        # data from the Raw object
- 
-        
- 
-    
-        # object and add the 9 "channels" from our IMF object
-        gss_emd_Raw.drop_channels()
- 
-        
+#%% 
+        """ 6.2.2 Turn IMFs into MNE RAW object again"""        
         #create Raw objects for the 9 IMF "channels"
-         
-        for imf_channel in imf:
-            print(1)
-            #new_channels.append()
+
+
+        """ get data for IMF Raw object """
+        
+        # get IMF values:
+        # create list with data from each channel, put them all in one "main" list
+        
+        imf_channels = list()
+        channel_names = list()
+        channel_types = list()
+        
+        for n in range(0, len(imf[0])) :
+            # use list comprehension to get nth element of each array in imf
+            # n = number of imf "channel"
+            curr_channel = [i[n] for i in imf]
+            imf_channels.append(curr_channel)
             
+            # collect info data for Raw object
+            channel_names.append("IMF_" + str(n+1))
+            channel_types.append("eeg")
             
+        # get timestamps:
+        time_vect = list(gss_Raw[:][1])
             
+        # get sampling frequency of the GSS data:
+        # to get the sampling frequency of the Arduino, I took 400 timestamp values and 
+        # their "neighbors" and calculated the difference to get the mean time that passes between the samples. 
+        # If you divide 1 by this value and round it you get a sampling rate of 45 Hz for the GSS data:          
+        sampling_freq_gss = np.round(1/np.mean(time_vect[300:700] - time_vect[299:699]))
             
-            
-            """ 4.2 Build NME data object from scratch """
-                        
-            """ 4.2.1 Create info for Raw Object for GSS data"""
-            
-            # get sampling rate of Arduino measuring the GSS data:
-            
-            # to get the sampling frequency of the Arduino, I took 400 timestamp values and 
-            # their "neighbors" and calculated the difference to get the mean time that passes between the samples. 
-            # If you divide 1 by this value and round it you get a sampling rate of 45 Hz for the GSS data:   
-            sampling_freq_gss = np.round(1/np.mean(streams[3]["time_stamps"][300:700] - streams[3]["time_stamps"][299:699]))
-            
-            # combine information, name and classify channels while doing so
-            info_gss = mne.create_info(ch_names = ["GSS"], 
-                                       ch_types = ["eeg"], 
-                                       sfreq = sampling_freq_gss)
-            
-            
-            
-            
-            
-            # add name of the curent dataset (I could also add information like age or gender here)
-            # (change this if the files names of the exp files are named differently)
-            info_gss['description'] = file_name[len(file_name)-30 : len(file_name)-4 : 1]
+        """ create info object for IMF Raw object """ 
+        info_imf = mne.create_info(ch_names = channel_names, ch_types = channel_types, sfreq = sampling_freq_gss)
+
+        # look at the info
+        #print(info_imf)
            
-            # look at the info
-            #print(info_gss)
-           
         
-            """ 4.2.2 Get GSS data for Raw object""" 
-            # structure should be: 
-                # rows: channels
-                # columns: sample points
-            
-            # get GSS data from stream 3:
-            # 128 arrays (1 for each electrode), 186013 sampling points
-            data_gss = np.array(streams[3]["time_series"].T) 
-        
-            # transform all values in eeg_data from Microvolt to Volt 
-            # as NME expects EEG data to be measured in Volt (why tho)
-            data_gss[:] *= 1e-6
-            
-                
-            """ 4.2.3 Create Raw object for EEG data""" 
-            # combine info & eeg data
-            gss_Raw = mne.io.RawArray(data_gss, info_gss)
-        
-        
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-         
-        # add channels to our existing Raw object    
-        gss_emd_Raw.add_channels(new_channels, force_update_info=False)
- 
+        # transform all values in eeg_data from Microvolt to Volt 
+        # as NME expects EEG data to be measured in Volt (why tho)
+        #data_gss[:] *= 1e-6
     
-    
+        """ 4.2.3 Create Raw object for IMF data""" 
+        #combine info & eeg data
+        IMF_Raw = mne.io.RawArray(imf_channels, info_imf)
+        
+  #%%     
         """ 6.2.3 ICA """
         # Now run ICA on the IMFs!
-        
-        #
-        
-        # Do I need to whiten my data? --> if yes set whiten = True
-        FastICA(n_components = 5, 
-                algorithm = 'parallel', 
-                whiten = F, 
-                fun = 'logcosh', 
-                max_iter = 200)
-        
-        
-        
-        
-        
-        
-        
+
         # Normally I'd highpass filter the data as the quality of the 
         # ICA fit is negatively affected by low-freq drifts, 
         # but I think there are no slow drifts in the IMFs, 
@@ -283,34 +216,38 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
         ica_decim = 5 # only use every 5th sample from the data --> speed up computation
         ica_max_iter = "auto" 
         # use a random seed to get the same results every time we run the ICA on the same data
-        ica_random_state = 97 
+        ica_random_state = 42 
         
         ica = ICA(n_components = ica_n_components, max_iter = ica_max_iter, random_state = ica_random_state)
 
         # fit ICA
-        ica.fit(imf)
+        ica.fit(IMF_Raw)
 
-        # check what the ICA captured
-        eeg_Raw.load_data()
-        # ica.plot_sources(ica_filt_raw, show_scrollbars = True)
-        # --> first ICA channel (ICA000) seems to capture the blinks quite well
+        # Plot to check what the ICA captured:
+        # I don't see anything. Just slighly wavy lines. 
+        # Is it supposed to look like this???
+        ica.plot_sources(IMF_Raw, show_scrollbars = True)
     
-        # exclude first ICA component:
-        # (I assume it'll be the 1st ICA channel for all participants)
+        # exclude first ICA component 
+        # (because I don't see anything in the ICA data
+        # and I assume the 1st channel always captures the motor artifacts best?
+        # Also I assume it'll be the 1st ICA channel for all participants?
         ica.exclude = [0] 
-        # apply ICA to eeg_Raw 
-        ica.apply(eeg_Raw)
-
- 
+        
+        # apply ICA to IMF_Raw
+        ica.apply(IMF_Raw)
     
-         """ TO DO: 
-             fix the ICA part, turn data into Raw object again, then
-             change the following part a bit so it fits the GSS data""" 
- 
+        
+        """ IMPORTANT QUESTION (seriously, I don't have a f***ing clue):
+        How do I transform my ICAed 9 IMF-channels back to 1 channel? 
+        Or do I just continue using the IMF data?
+        Also: Does my ICA make sense???
+        """
 
+
+ #%% 
         """ 6.2.3 filter GSS data """
         # (variables are defined at the beginning of the script))
-        
         
         gss_bandpass_fmin = 4
         gss_bandpass_fmax = 12 
@@ -319,8 +256,6 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
         gss_fir_design = pass
         gss_n_jobs = pass
         
-        
-        
         gss_Raw.filter(l_freq = gss_bandpass_fmin, 
                        h_freq = gss_bandpass_fmax,   
                        phase = gss_phase,
@@ -328,7 +263,7 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
                        fir_design = gss_fir_design, 
                        n_jobs = gss_n_jobs)
 
-        
+  #%%        
         """ 6.2.4 Epoching """    
         # max_force_xxx -> initial maximum grip force of participant
         # block -> Blocks 0 - 3
@@ -346,7 +281,7 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
         #        sfc = % of max grip force (e.g. 0.25%)
         #    5. end_trial
         
-        
+   #%%       
         """ Get Triggers & save as Annotations object """
         
         # get trigger timestamps and trigger descriptions
@@ -373,7 +308,7 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
         else:
             b_main_Raw = gss_Raw.copy().crop(tmin = b1_onset)
 
-
+ #%% 
         """ create epochs, only use data from blocks 1 & 2 """
         
         """ create events from annotations """
@@ -448,14 +383,17 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
         #search_values = ['0,25', '.3']
         # more on how to use the metadata: 
         # https://mne.tools/dev/auto_tutorials/epochs/30_epochs_metadata.html
-    
-        """ 7. save Raw object & epoched data for each participant in the file """
-        # I set as the working directory at the beginning of the script
+
+    #%%     
+        """ 7. save Raw object & epoched data for each participant in the file 
+        I set as the working directory at the beginning of the script """
         trial_epochs.save(fname = "gss_participant" + str(participant) + "_epo.fif", fmt = 'single', overwrite = False)
 
 
     # END LOOP   
     
+    
+    #%% 
     
     """ 8. Create "I'm done!"-message: """
     if participant == 0:
@@ -469,5 +407,3 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
         
     
 # END FUNCTION
-
-
