@@ -2,23 +2,29 @@
 Function for preprocessing GSS data (from fif files)
 
 Part of Merle's Master Thesis
-Version 1: 18.11.2021
+Version 1: 13.01.2022
 
 Input: File containing .fif files with GSS data + triggers for each participant
-Output: 
-        - .fif file containing MNE epochs object with filtered GSS data
-        - plots:
-            - for each participant...
-                - powerspectrum: data before filtering (over all conditions + blocks)
-                - powerspectrum: data after filtering (over all conditions + blocks)
+Output: .fif file containing MNE epochs object with filtered & epoched GSS data
 """
 
 #%% 
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
 # create function to filter + epoch data automatically
-def GSS_filter_epoching(working_directory, directory_for_plots):
+def GSS_filter_epoching(working_directory, 
+                        gss_bandpass_fmin = 4, 
+                        gss_bandpass_fmax = 12, 
+                        gss_phase = "zero", 
+                        gss_window_type = 'hamming', 
+                        gss_fir_design = 'firwin', 
+                        gss_n_jobs = 1, 
+                        gss_prestim_cutoff = -1.5, 
+                        gss_poststim_cutoff = 4):
       
+    # I set default arguments, but they can be overwritten 
+    # if you set different arguments in the function call.
+    
     """ 1. load packages """
        
     # Python MNE for eeg data analysis / processing:
@@ -47,7 +53,7 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
     import numpy as np
     
     # import ICA function 
-    from sklearn.decomposition import FastICA
+    from mne.preprocessing import ICA
     
     #%% 
     """ 2. set working directory """
@@ -290,14 +296,7 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
  
         """ 6.2.3 filter GSS data """
         # (variables are defined at the beginning of the script))
-        
-        gss_bandpass_fmin = 4
-        gss_bandpass_fmax = 12 
-        gss_phase = "zero"
-        gss_window_type = 'hamming'
-        gss_fir_design = 'firwin' 
-        gss_n_jobs = 1
-        
+                
         gss_ICAed_Raw.filter(l_freq = gss_bandpass_fmin, 
                              h_freq = gss_bandpass_fmax,   
                              phase = gss_phase,
@@ -470,3 +469,5 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
         
     
 # END FUNCTION
+
+
