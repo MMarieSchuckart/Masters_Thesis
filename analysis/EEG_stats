@@ -1,16 +1,17 @@
+
 """ Stats script for Merle's Master's Thesis
 
 Stats part for EEG data
 
 Part of Merle's Master Thesis
-Version 1: 02.01.2022
+Version 1: 25.8.2021
 
 """
 
 
 #-------------------------------------------------
 
-""" Settings for power spectral density (PSD) analysis using Welch's Method """ 
+""" 1.2 Settings for power spectral density (PSD) analysis using Welch's Method """ 
 
 # settings for cropping the epoch:
 #psd_tmin = 1 
@@ -39,11 +40,21 @@ Version 1: 02.01.2022
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
 # create function for running EEG stats script
-def EEG_stats(working_directory, psd_sfreq, psd_fmin, psd_fmax, psd_tmin, psd_tmax,
-              psd_n_overlap, psd_n_per_seg, psd_n_jobs, 
-              psd_average, psd_window):
-
-
+def EEG_stats(working_directory, 
+              psd_tmin = 1, 
+              psd_tmax = 4, 
+              psd_sfreq = 500, 
+              psd_fmin = 4, 
+              psd_fmax = 36, 
+              psd_n_overlap = 0, 
+              psd_n_per_seg = None, 
+              psd_n_jobs = 1, 
+              psd_average = 'mean', 
+              psd_window = 'hamming'):
+    
+    # I set default arguments, but they can be overwritten 
+    # if you set different arguments in the function call.
+    
     """ settings """
 
     """ 1.1 load packages """
@@ -321,4 +332,5 @@ def EEG_stats(working_directory, psd_sfreq, psd_fmin, psd_fmax, psd_tmin, psd_tm
 """ TO DO:"""
 # Which PSD Method (Welch or Multitaper)? 
 # nonparametric PSD method: Periodogram as direct transformation of signal (--> Welch method)?
-     
+                
+    
