@@ -9,11 +9,12 @@
 
 """ Before using this script...
 
-Please make sure the packages MNE and pyxdf can be installed 
+Please make sure the packages MNE, pyxdf and emd can be installed 
 on your machine if you have never used them before.
 You might need to pip install them in your terminal:
      pip install pyxdf
      pip install mne
+     pip install emd
   
 If you can't pip install the latest stable pyxdf version directly, 
 try installing the latest developer version from github 
