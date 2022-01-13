@@ -246,23 +246,74 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
 
 
  #%% 
+        """ IDEA: the EMD just decomposes a complex signal into it's components, right? 
+        Can I just add the channels to get the complex signal back, 
+        just without the component I excluded in the ICA? """
+
+        # F**k it, I'll just try it.
+        
+        # get each data channel from IMF_Raw, 
+        # put everything into nested list:
+        imf_channels = list()
+        for channel in range(0,len(IMF_Raw._data)):
+            curr_channel = IMF_Raw._data[channel]
+            imf_channels.append(curr_channel)
+        
+        # Now get sum of the nested lists (but elementwise)
+        # --> like this:
+        #              [[1, 2, 1],
+        #            +  [3, 3, 1]]
+        # Output:       [4, 5, 2]    
+        gss_ICAed = [sum(i) for i in zip(*imf_channels)]
+
+        # plot old signal in red
+        #plt.plot(gss_values, color = "red", alpha = 0.2)
+        # plot ICAed signal in blue
+        #plt.plot(gss_ICAed, color = "steelblue", alpha = 1)
+        #plt.show()
+        # Okayyy the signals look pretty much alike
+        # so my idea seems to work!
+        
+
+ #%% 
+        """ put ICAed signal back into gss_Raw """ 
+        
+        # create copy of gss_Raw
+        gss_ICAed_Raw = gss_Raw.copy()
+ 
+        # change data in data channel
+        gss_ICAed_Raw._data[0] = gss_ICAed
+ 
+        # Now continue using the ICAed data!
+ 
+ #%% 
+ 
         """ 6.2.3 filter GSS data """
         # (variables are defined at the beginning of the script))
         
         gss_bandpass_fmin = 4
         gss_bandpass_fmax = 12 
-        gss_phase = pass
-        gss_window_type = pass 
-        gss_fir_design = pass
-        gss_n_jobs = pass
+        gss_phase = "zero"
+        gss_window_type = 'hamming'
+        gss_fir_design = 'firwin' 
+        gss_n_jobs = 1
         
-        gss_Raw.filter(l_freq = gss_bandpass_fmin, 
-                       h_freq = gss_bandpass_fmax,   
-                       phase = gss_phase,
-                       fir_window = gss_window_type, 
-                       fir_design = gss_fir_design, 
-                       n_jobs = gss_n_jobs)
-
+        gss_ICAed_Raw.filter(l_freq = gss_bandpass_fmin, 
+                             h_freq = gss_bandpass_fmax,   
+                             phase = gss_phase,
+                             fir_window = gss_window_type, 
+                             fir_design = gss_fir_design, 
+                             n_jobs = gss_n_jobs)
+        
+        # plot unfiltered ICAed signal in blue
+        plt.plot(gss_ICAed, color = "red", alpha = 0.2)
+        # plot filtered ICAed signal in green
+        plt.plot(gss_ICAed, color = "steelblue", alpha = 1)
+        plt.show()
+        
+        # This looks exactly the same. I wonder if the EMD "smoothes" 
+        # the signal a bit by excluding all temporary weird oscillations.
+        
   #%%        
         """ 6.2.4 Epoching """    
         # max_force_xxx -> initial maximum grip force of participant
@@ -285,12 +336,23 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
         """ Get Triggers & save as Annotations object """
         
         # get trigger timestamps and trigger descriptions
-        trigger_descriptions = gss_Raw.annotations.description.tolist()
-        trigger_timestamps = gss_Raw.annotations.onset.tolist()    
+        trigger_descriptions = gss_ICAed_Raw.annotations.description.tolist()
+        trigger_timestamps = gss_ICAed_Raw.annotations.onset.tolist()   
+        
+        
+        # Have a look at the descriptions: 
+        # print(trigger_descriptions)
+        # The sensor seems to start mid-experiment, this is a bit weird. 
+        # So apparently there is no b0 trigger.
     
         """ get block onsets & crop eeg_Raw to seperate blocks """
-        b0_onset = trigger_timestamps[trigger_descriptions.index("block0")]
-        
+        if "block0" in trigger_descriptions:
+            b0_onset = trigger_timestamps[trigger_descriptions.index("block0")]
+        # if there is no block0 in the triggers, use the first 
+        # timestamp as the onset of b0    
+        else: 
+            b0_onset = trigger_timestamps[0]
+            
         # if the trigger block1 is in the list of trigger descriptions, save onset.
         if "block1" in trigger_descriptions:
             b1_onset = trigger_timestamps[trigger_descriptions.index("block1")]
@@ -304,9 +366,9 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
     
         # exclude training block and block 3 (or just exclude training, if there is no block 3)
         if "block3" in trigger_descriptions:
-            b_main_Raw = gss_Raw.copy().crop(tmin = b1_onset, tmax = b3_onset)
+            b_main_Raw = gss_ICAed_Raw.copy().crop(tmin = b1_onset, tmax = b3_onset)
         else:
-            b_main_Raw = gss_Raw.copy().crop(tmin = b1_onset)
+            b_main_Raw = gss_ICAed_Raw.copy().crop(tmin = b1_onset)
 
  #%% 
         """ create epochs, only use data from blocks 1 & 2 """
@@ -366,7 +428,8 @@ def GSS_filter_epoching(working_directory, directory_for_plots):
         gss_epochs_metadata = gss_epochs_metadata.transpose()  
         
         gss_epochs_metadata.columns = ["feedback", "sfb", "sfc"]
-        
+
+#%%
         """ get epochs, apply baseline correction on the fly """
         # event = trial start, cut from -1.5 to +7           
         trial_epochs = mne.Epochs(b_main_Raw, trial_events, trial_event_id, 
