@@ -68,8 +68,8 @@ def GSS_filter_epoching(working_directory,
     #gss_figs_before_filtering = []
     #gss_figs_after_filtering = []
     
-    """ 5. keep track of participants """
-    participant = 0
+    """ 5. keep track of files """
+    file = 0
     
    #%%  
     """ 6. loop fif file names in file_list (aka loop participants): """
@@ -185,7 +185,7 @@ def GSS_filter_epoching(working_directory,
         # to get the sampling frequency of the Arduino, I took 400 timestamp values and 
         # their "neighbors" and calculated the difference to get the mean time that passes between the samples. 
         # If you divide 1 by this value and round it you get a sampling rate of 45 Hz for the GSS data:          
-        sampling_freq_gss = np.round(1/np.mean(time_vect[300:700] - time_vect[299:699]))
+        sampling_freq_gss = np.round(1/np.mean(np.array(time_vect[300:700]) - np.array(time_vect[299:699])))
             
         """ create info object for IMF Raw object """ 
         info_imf = mne.create_info(ch_names = channel_names, ch_types = channel_types, sfreq = sampling_freq_gss)
@@ -232,7 +232,7 @@ def GSS_filter_epoching(working_directory,
         # Plot to check what the ICA captured:
         # I don't see anything. Just slighly wavy lines. 
         # Is it supposed to look like this???
-        ica.plot_sources(IMF_Raw, show_scrollbars = True)
+        #ica.plot_sources(IMF_Raw, show_scrollbars = True)
     
         # exclude first ICA component 
         # (because I don't see anything in the ICA data
@@ -286,7 +286,10 @@ def GSS_filter_epoching(working_directory,
         
         # create copy of gss_Raw
         gss_ICAed_Raw = gss_Raw.copy()
- 
+        
+        # load data so I can use indexing 
+        gss_ICAed_Raw.load_data()
+    
         # change data in data channel
         gss_ICAed_Raw._data[0] = gss_ICAed
  
@@ -305,10 +308,10 @@ def GSS_filter_epoching(working_directory,
                              n_jobs = gss_n_jobs)
         
         # plot unfiltered ICAed signal in blue
-        plt.plot(gss_ICAed, color = "red", alpha = 0.2)
+        #plt.plot(gss_ICAed, color = "red", alpha = 0.2)
         # plot filtered ICAed signal in green
-        plt.plot(gss_ICAed, color = "steelblue", alpha = 1)
-        plt.show()
+        #plt.plot(gss_ICAed, color = "steelblue", alpha = 1)
+        #plt.show()
         
         # This looks exactly the same. I wonder if the EMD "smoothes" 
         # the signal a bit by excluding all temporary weird oscillations.
@@ -446,11 +449,14 @@ def GSS_filter_epoching(working_directory,
         # more on how to use the metadata: 
         # https://mne.tools/dev/auto_tutorials/epochs/30_epochs_metadata.html
 
-    #%%     
+    #%%         
         """ 7. save Raw object & epoched data for each participant in the file 
         I set as the working directory at the beginning of the script """
         trial_epochs.save(fname = "gss_participant" + str(participant) + "_epo.fif", fmt = 'single', overwrite = False)
 
+    
+        # save number of processed files
+        file += 1
 
     # END LOOP   
     
@@ -458,14 +464,14 @@ def GSS_filter_epoching(working_directory,
     #%% 
     
     """ 8. Create "I'm done!"-message: """
-    if participant == 0:
+    if file == 0:
         print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, something went wrong: I couldn't run the preproc function on any file. Maybe you should have a look at this.\n\n- - - - - - - - - - - - - - - - - - - - - ")
     
-    elif participant == 1:
+    elif file == 1:
         print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I filtered & epoched 1 file for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the file gss_participant1_epo.fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
         
     else:
-        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I filtered & epoched " + str(participant) + " files for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the files gss_participant[number]_epo.fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I filtered & epoched " + str(file) + " files for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the files gss_participant[number]_epo.fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
         
     
 # END FUNCTION
