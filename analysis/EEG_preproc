@@ -2,15 +2,10 @@
 Function for preprocessing EEG data (from fif files)
 
 Part of Merle's Master Thesis
-Version 1: 06.01.2021
+Version 1: 13.01.2022
 
 Input: File containing .fif files with EEG data + triggers for each participant
-Output: 
-        - .fif file containing MNE epochs object with filtered EEG data
-        - plots:
-            - for each participant...
-                - powerspectrum: data before filtering (over all conditions + blocks)
-                - powerspectrum: data after filtering (over all conditions + blocks)
+Output: .fif file containing MNE epochs object with filtered EEG data
 
 """
 #-------------------------------------------------
@@ -18,12 +13,24 @@ Output:
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
 # create function to filter + epoch data automatically
-def EEG_filter_epoching(working_directory, directory_for_plots, 
-                        eeg_fir_design, eeg_window_type, eeg_phase, 
-                        eeg_bandpass_fmin, eeg_bandpass_fmax, n_jobs, 
-                        eeg_prestim_cutoff, eeg_poststim_cutoff, 
-                        eeg_channel_picks, eog_channels, 
-                        ica_n_components, ica_max_iter, ica_random_state):    
+def EEG_filter_epoching(working_directory, 
+                        eeg_channel_picks, 
+                        eog_channels,
+                        eeg_fir_design = 'firwin', 
+                        eeg_window_type = 'hamming', 
+                        eeg_phase = "zero", 
+                        eeg_bandpass_fmin = 5, 
+                        eeg_bandpass_fmax = 35, 
+                        n_jobs = 1, 
+                        eeg_prestim_cutoff = -1.5, 
+                        eeg_poststim_cutoff = 4, 
+                        ica_n_components = 5, 
+                        ica_max_iter = "auto", 
+                        ica_random_state = 97):    
+    
+    # I set default arguments, but they can be overwritten 
+    # if you set different arguments in the function call.
+    
     
     """ 1. load packages """
        
