@@ -1,0 +1,32 @@
+---
+title: "Plots for Merle's Master's Thesis"
+author: "Merle Schuckart"
+date: "1/14/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE}
+# Settings
+
+# turn off scientific notation because I hate it
+options(scipen=999)
+
+# import csv containing the t-test results for the EEG data
+t_test_results <- read.csv("/Users/merle/Desktop/Masterarbeit/Master_Testdaten/t_test_results.csv")
+
+# currently, I only have 1 test dataset, so obvi the p- and T-values are completely messed up
+
+# for plotting, "simulate" some p-values:
+# assign random p-vales (> and < than 0.05)
+t_test_results$p_feedback[which(t_test_results$p_feedback != 0)] <- 0.04
+t_test_results$p_feedback[which(t_test_results$p_feedback == 0)] <- 0.6
+t_test_results$p_sfc[which(t_test_results$p_sfc != 0)] <- 0.03
+t_test_results$p_sfc[which(t_test_results$p_sfc == 0)] <- 0.2
+
+# Just ignore the weird T-values for now!
+
+```
