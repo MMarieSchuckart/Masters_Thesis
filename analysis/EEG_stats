@@ -336,11 +336,9 @@ def EEG_stats(working_directory,
              t_test_results["p_feedback"] = fdr(t_test_results["p_feedback"], alpha = 0.05, method='indep', is_sorted=False)[1]
              t_test_results["p_sfc"] = fdr(t_test_results["p_sfc"], alpha = 0.05, method='indep', is_sorted=False)[1]
 
-
-             """ Plot p-values in weird heatmap plot """
-
-
-
+             #save file as csv so I can do mad plotting stuff in R 
+             t_test_results.to_csv(working_directory + "t_test_results.csv", index = False)
+             beta_coeffs_res.to_csv(working_directory + "beta_coeffs_results.csv", index = False)
 
 # END FUNCTION
 
@@ -349,5 +347,6 @@ def EEG_stats(working_directory,
 """ TO DO:"""
 # Which PSD Method (Welch or Multitaper)? 
 # nonparametric PSD method: Periodogram as direct transformation of signal (--> Welch method)?
-       
-
+  
+  
+  
