@@ -60,7 +60,7 @@ def EEG_filter_epoching(working_directory,
     """ 3. get list of all .fif files in my directory """
     # (the asterix in the path means the name of the 
     # file can be anything as long as it has an .xdf ending)
-    file_list = glob.glob(working_directory + "Raw_eeg_participant" + "*.fif")
+    file_list = glob.glob(working_directory + "eeg_participant" + "_raw*.fif")
 
     """ 4. Create empty lists to keep track of plots (before and after filtering)"""
     #eeg_figs_before_filtering = []
