@@ -2,7 +2,7 @@
 Function for reading in EEG xdf files
 
 Part of Merle's Master Thesis
-Version 1: 06.01.2021
+Version 1: 12.8.2021
 
 Input: File containing .xdf files with EEG data for each participant
 Output: .fif file containing EEG data + triggers for each participant
@@ -246,7 +246,7 @@ def read_in_EEG(working_directory):
 
         """ 6.8 save Raw object containing EEG data in the file 
         we already stored the xdf files in """
-        eeg_Raw.save(fname = "Raw_eeg_participant" + str(participant) + ".fif", fmt = 'single', overwrite = False)
+        eeg_Raw.save(fname = "eeg_participant" + str(participant) + "_raw.fif", fmt = 'single', overwrite = False)
         
     
     
@@ -257,10 +257,10 @@ def read_in_EEG(working_directory):
         print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, something went wrong: I couldn't run the read-in function on any file. Maybe you should have a look at this.\n\n- - - - - - - - - - - - - - - - - - - - - ")
     
     elif participant == 1:
-        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I read in 1 xdf-file for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the fif-file Raw_eeg_participant1.fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I read in 1 xdf-file for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the fif-file eeg_participant1_raw.fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
         
     else:
-        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I read in " + str(participant) + " xdf-files for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the fif-files Raw_eeg_participant[number].fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I read in " + str(participant) + " xdf-files for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the fif-files eeg_participant[number]_raw.fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
         
 ### END FUNCTION        
 
