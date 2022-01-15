@@ -78,16 +78,8 @@ def read_in_GSS(working_directory):
         
         """ 4.2.1 Create info for Raw Object for GSS data"""
         
-        # get sampling rate of Arduino measuring the GSS data:
-        
-        # to get the sampling frequency of the Arduino, I took 400 timestamp values and 
-        # their "neighbors" and calculated the difference to get the mean time that passes between the samples. 
-        # If you divide 1 by this value and round it you get a sampling rate of 45 Hz for the GSS data:   
-        sampling_freq_gss = np.round(1/np.mean(streams[3]["time_stamps"][300:700] - streams[3]["time_stamps"][299:699]))
-        
-        # quick check: if you do the same for the EEG timestamps, 
-        # you get 500 as a result, which corresponds to the sampling rate from the xdf info, so this is correct. 
-        #np.round(1/np.mean(streams[1]["time_stamps"][300:700] - streams[1]["time_stamps"][299:699]))
+        # set sampling rate of Arduino measuring the GSS data:
+        sampling_freq_gss = 80
         
         # combine information, name and classify channels while doing so
         info_gss = mne.create_info(ch_names = ["GSS"], 
@@ -209,7 +201,7 @@ def read_in_GSS(working_directory):
 
  #%%   
         """ 4.5 save Raw object for each participant in the working directory """ 
-        gss_Raw.save(fname = "Raw_gss_participant" + str(participant) + ".fif", fmt = 'single', overwrite = False)
+        gss_Raw.save(fname = "gss_participant" + str(participant) + "_raw.fif", fmt = 'single', overwrite = False)
     
     
     ### END LOOP PARTICIPANTS 
