@@ -92,9 +92,6 @@ I only have a single test dataset for writing my scripts so Julius sent me a few
 --> use interval of -1.5 - 0 s before trial onset as baseline for baseline correction
     * save epochs and MNE-Raw-Object
 
-:warning: &nbsp; TO DO: Filtering & epoching for GSS data 
---> delete GSS data from annotations and create another MNE-Raw-Object instead
-&nbsp;
 
 ### Stats: 
 * for each participant...
@@ -103,4 +100,4 @@ I only have a single test dataset for writing my scripts so Julius sent me a few
     * get beta coefficients for each participant at each channel & for each frequency
     * run t-test on beta coefficients for each channel & frequency (aggregate over participants) 
      
-:warning: &nbsp; TO DO: Analysis of the GSS data
+
