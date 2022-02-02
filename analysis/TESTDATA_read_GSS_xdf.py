@@ -91,7 +91,6 @@ for file_name in file_list:
     # look at the info
     #print(info_gss)
     
-    
   #%%     
     """ Find out which stream contains which kind of data """
     # the streams are in a different order in each file, so find out 
@@ -99,19 +98,22 @@ for file_name in file_list:
         
     for stream_idx in range(0, 3):
 
-        # if there are 
+        # if there are 22 data arrays, it's not the triggers 
+        # and probably not the GSS data, so ignore that stream
         if len(streams[stream_idx]["time_series"][0]) != 22:
-        
+            # get first time series value from current stream
             curr_stream_val = streams[stream_idx]["time_series"][0][0]
     
+            # check if first value is a number or text
+            # if it's a number, it's the GGS stream
             if isfloat(curr_stream_val):
                 gss_idx = stream_idx
                 print(str(stream_idx) + " = GSS")
-
+            # if it's text, it's the trigger stream
             else: 
                 trig_idx = stream_idx
                 print(str(stream_idx) + " = Triggers")
-
+        # I assume the other stream contains EEG data from 22 channels? Idk. 
         else: print(str(stream_idx) + " = EEG")
     
     print("---------------------------------------")
