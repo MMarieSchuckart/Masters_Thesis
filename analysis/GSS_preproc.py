@@ -2,14 +2,21 @@
 Function for preprocessing GSS data (from fif files)
 
 Part of Merle's Master Thesis
-Version 1: 2.2.2022
+Version 1: 13.01.2022
 
 Input: File containing .fif files with GSS data + triggers for each participant
 Output: .fif file containing MNE epochs object with filtered & epoched GSS data
 """
 
 #%% 
-#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+gss_bandpass_fmin = 4 
+gss_bandpass_fmax = 12 
+gss_phase = "zero" 
+gss_window_type = 'hamming' 
+gss_fir_design = 'firwin' 
+gss_n_jobs = 1 
+
 
 # create function to filter + epoch data automatically
 def GSS_filter_epoching(working_directory, 
@@ -81,7 +88,7 @@ def GSS_filter_epoching(working_directory,
         # the participant numbers in file list are in the wrong order
         # so get the number from the filename instead of the loop index number
     
-        participant = file_name[-7:-4]
+        participant = file_name[-11:-8]
         
         # if participant number has < 3 digits, shorten the number
         if participant[0] == "n":
@@ -386,7 +393,7 @@ def GSS_filter_epoching(working_directory,
  #%% 
  
         """ 6.2.3 filter GSS data """
-        # (variables are created as function arguments)
+        # (variables are defined at the beginning of the script))
                 
         #gss_bandpass_fmin = 4 
         #gss_bandpass_fmax = 12 
