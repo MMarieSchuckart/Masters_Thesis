@@ -2,7 +2,7 @@
 Function for preprocessing GSS data (from fif files)
 
 Part of Merle's Master Thesis
-Version 1: 13.01.2022
+Version 1: 2.2.2022
 
 Input: File containing .fif files with GSS data + triggers for each participant
 Output: .fif file containing MNE epochs object with filtered & epoched GSS data
@@ -18,9 +18,7 @@ def GSS_filter_epoching(working_directory,
                         gss_phase = "zero", 
                         gss_window_type = 'hamming', 
                         gss_fir_design = 'firwin', 
-                        gss_n_jobs = 1, 
-                        gss_prestim_cutoff = -1.5, 
-                        gss_poststim_cutoff = 4):
+                        gss_n_jobs = 1):
       
     # I set default arguments, but they can be overwritten 
     # if you set different arguments in the function call.
@@ -55,6 +53,10 @@ def GSS_filter_epoching(working_directory,
     # import ICA function 
     from mne.preprocessing import ICA
     
+    # Please make sure you pip installed the hampel package:
+    #pip install hampel
+    from hampel import hampel
+    
     #%% 
     """ 2. set working directory """
     os.chdir(working_directory)
@@ -62,7 +64,7 @@ def GSS_filter_epoching(working_directory,
     """ 3. get list of all gss .fif files in my directory """
     # (the asterix in the path means the name of the 
     # file can be anything as long as it has an .xdf ending)
-    file_list = glob.glob(working_directory + "Raw_gss_participant" + "*.fif")
+    file_list = glob.glob(working_directory + "gss_participant" + "*raw.fif")
     
     """ 4. Create empty lists to keep track of plots (before and after filtering)"""
     #gss_figs_before_filtering = []
@@ -81,19 +83,26 @@ def GSS_filter_epoching(working_directory,
     
         participant = file_name[-7:-4]
         
-        # if participant number has < 2 or 3 digits, shorten the number
+        # if participant number has < 3 digits, shorten the number
         if participant[0] == "n":
             participant = participant[-1]
         elif participant[0] == "t":
-            participant = participant[-2:]
-        
+            participant = participant[-2:]        
         
         """ 6.1 read in fif file """
         gss_Raw = mne.io.read_raw_fif(file_name)
-        gss_values = gss_Raw[:][0][0]
+
+    
+ #%%    
+        """ 6.2 Preprocessing """
+        # (variables used here are set in the main script)
+        
+        # If you have a look at the gss data, you'll see that the Arduino 
+        # didn't record the whole time but only during the trials. 
                 
         # plot raw data:
-        # turn gss_data into list instead of np.array
+        # get data & turn gss_data into list instead of np.array
+        #gss_values = gss_Raw[:][0][0]
         #gss_values = gss_values.tolist()
             
         # get time stamps
@@ -101,223 +110,12 @@ def GSS_filter_epoching(working_directory,
             
         #plt.plot(time_vect, gss_values)
         #plt.show()
+
+        # Solution: Epoching before cleaning the data.
+        
+#%%        
+        """ Epoching """
     
- #%%    
-        """ 6.2 Preprocessing """
-        # (variables used here are set in the main script)
-
-        
-        """ 6.2.1 empirical mode decomposition """
-        # (to get rid of motor / heart artifacts)
-        # Wich different oscillations are there in the signal 
-        # that are non-linear or non-stationary? 
-        #--> https://emd.readthedocs.io/en/stable/
-    
-        # estimate IMFs (=intrinsic mode functions) 
-        # for the gss signal...
-        imf = emd.sift.sift(gss_values)
-    
-        # In the imf object, there are 12707 arrays containing 9 values each.
-        # So there are basically 9 time-frequency channels here.
-        # Have a look:
-        #print(imf.shape)
-            
-        # plot it! 
-        emd.plotting.plot_imfs(imf, scale_y = True, cmap = True)    
-    
-
-        # I don't need the following bit rn, but could be useful later:
-    
-        # ...and, from the IMFs, compute the instantaneous 
-        # frequency (IF), phase (IP) and amplitude (IA) using the 
-        # Normalised Hilbert Transform Method:
-        #IP, IF, IA = emd.spectra.frequency_transform(imf, 45, 'hilbert')
-    
-        # From the instantaneous frequency and amplitude, we can compute the Hilbert-Huang spectrum:
-        # Define the frequency range (low_freq, high_freq, nsteps, spacing)
-        #freq_range = (0.1, 10, 80, 'log')
-        
-        # Now compute the Hilbert-Huang spectrum:
-        #f, hht = emd.spectra.hilberthuang(IF, IA, freq_range, sum_time = False)
-
-        # plot summary information, first the IMFs...
-        #emd.plotting.plot_imfs(imf, scale_y = True, cmap = True)
-        
-        # ...and now the Hilbert-Huang transform of this decomposition:
-        #fig = plt.figure(figsize=(10, 6))
-        #emd.plotting.plot_hilberthuang(hht, 
-        #                               time_vect, 
-        #                               f,
-        #                               time_lims = (2, 4), 
-        #                               freq_lims = (0.1, 15),
-        #                               fig = fig, 
-        #                               log_y = True)
- 
-    
-#%% 
-        """ 6.2.2 Turn IMFs into MNE RAW object again"""        
-        #create Raw objects for the 9 IMF "channels"
-
-
-        """ get data for IMF Raw object """
-        
-        # get IMF values:
-        # create list with data from each channel, put them all in one "main" list
-        
-        imf_channels = list()
-        channel_names = list()
-        channel_types = list()
-        
-        for n in range(0, len(imf[0])) :
-            # use list comprehension to get nth element of each array in imf
-            # n = number of imf "channel"
-            curr_channel = [i[n] for i in imf]
-            imf_channels.append(curr_channel)
-            
-            # collect info data for Raw object
-            channel_names.append("IMF_" + str(n+1))
-            channel_types.append("eeg")
-            
-        # get timestamps:
-        time_vect = list(gss_Raw[:][1])
-            
-        # get sampling frequency of the GSS data:
-        # to get the sampling frequency of the Arduino, I took 400 timestamp values and 
-        # their "neighbors" and calculated the difference to get the mean time that passes between the samples. 
-        # If you divide 1 by this value and round it you get a sampling rate of 45 Hz for the GSS data:          
-        sampling_freq_gss = np.round(1/np.mean(np.array(time_vect[300:700]) - np.array(time_vect[299:699])))
-            
-        """ create info object for IMF Raw object """ 
-        info_imf = mne.create_info(ch_names = channel_names, ch_types = channel_types, sfreq = sampling_freq_gss)
-
-        # look at the info
-        #print(info_imf)
-           
-        
-        # transform all values in eeg_data from Microvolt to Volt 
-        # as NME expects EEG data to be measured in Volt (why tho)
-        #data_gss[:] *= 1e-6
-    
-        """ 4.2.3 Create Raw object for IMF data""" 
-        #combine info & eeg data
-        IMF_Raw = mne.io.RawArray(imf_channels, info_imf)
-        
-  #%%     
-        """ 6.2.3 ICA """
-        # Now run ICA on the IMFs!
-
-        # Normally I'd highpass filter the data as the quality of the 
-        # ICA fit is negatively affected by low-freq drifts, 
-        # but I think there are no slow drifts in the IMFs, 
-        # because their mean is always 0 anyway or something like that?
-        # Just look at the IMF plot.
-        
-        # set up ICA (variables are defined at the beginning of the script)
-        # how many components do I need here? 5?
-
-        # ICA Settings:
-        # ICA method is fastICA (= default)
-        # use the first 5 components from the PCA (faster computation, no need to look at all 13 channels)
-        ica_n_components = 5
-        ica_decim = 5 # only use every 5th sample from the data --> speed up computation
-        ica_max_iter = "auto" 
-        # use a random seed to get the same results every time we run the ICA on the same data
-        ica_random_state = 42 
-        
-        ica = ICA(n_components = ica_n_components, max_iter = ica_max_iter, random_state = ica_random_state)
-
-        # fit ICA
-        ica.fit(IMF_Raw)
-
-        # Plot to check what the ICA captured:
-        # I don't see anything. Just slighly wavy lines. 
-        # Is it supposed to look like this???
-        #ica.plot_sources(IMF_Raw, show_scrollbars = True)
-    
-        # exclude first ICA component 
-        # (because I don't see anything in the ICA data
-        # and I assume the 1st channel always captures the motor artifacts best?
-        # Also I assume it'll be the 1st ICA channel for all participants?
-        ica.exclude = [0] 
-        
-        # apply ICA to IMF_Raw
-        ica.apply(IMF_Raw)
-    
-        
-        """ IMPORTANT QUESTION (seriously, I don't have a f***ing clue):
-        How do I transform my ICAed 9 IMF-channels back to 1 channel? 
-        Or do I just continue using the IMF data?
-        Also: Does my ICA make sense???
-        """
-
-
- #%% 
-        """ IDEA: the EMD just decomposes a complex signal into it's components, right? 
-        Can I just add the channels to get the complex signal back, 
-        just without the component I excluded in the ICA? """
-
-        # F**k it, I'll just try it.
-        
-        # get each data channel from IMF_Raw, 
-        # put everything into nested list:
-        imf_channels = list()
-        for channel in range(0,len(IMF_Raw._data)):
-            curr_channel = IMF_Raw._data[channel]
-            imf_channels.append(curr_channel)
-        
-        # Now get sum of the nested lists (but elementwise)
-        # --> like this:
-        #              [[1, 2, 1],
-        #            +  [3, 3, 1]]
-        # Output:       [4, 5, 2]    
-        gss_ICAed = [sum(i) for i in zip(*imf_channels)]
-
-        # plot old signal in red
-        #plt.plot(gss_values, color = "red", alpha = 0.2)
-        # plot ICAed signal in blue
-        #plt.plot(gss_ICAed, color = "steelblue", alpha = 1)
-        #plt.show()
-        # Okayyy the signals look pretty much alike
-        # so my idea seems to work!
-        
-
- #%% 
-        """ put ICAed signal back into gss_Raw """ 
-        
-        # create copy of gss_Raw
-        gss_ICAed_Raw = gss_Raw.copy()
-        
-        # load data so I can use indexing 
-        gss_ICAed_Raw.load_data()
-    
-        # change data in data channel
-        gss_ICAed_Raw._data[0] = gss_ICAed
- 
-        # Now continue using the ICAed data!
- 
- #%% 
- 
-        """ 6.2.3 filter GSS data """
-        # (variables are defined at the beginning of the script))
-                
-        gss_ICAed_Raw.filter(l_freq = gss_bandpass_fmin, 
-                             h_freq = gss_bandpass_fmax,   
-                             phase = gss_phase,
-                             fir_window = gss_window_type, 
-                             fir_design = gss_fir_design, 
-                             n_jobs = gss_n_jobs)
-        
-        # plot unfiltered ICAed signal in blue
-        #plt.plot(gss_ICAed, color = "red", alpha = 0.2)
-        # plot filtered ICAed signal in green
-        #plt.plot(gss_ICAed, color = "steelblue", alpha = 1)
-        #plt.show()
-        
-        # This looks exactly the same. I wonder if the EMD "smoothes" 
-        # the signal a bit by excluding all temporary weird oscillations.
-        
-  #%%        
-        """ 6.2.4 Epoching """    
         # max_force_xxx -> initial maximum grip force of participant
         # block -> Blocks 0 - 3
         # Block 0 = training 
@@ -334,18 +132,15 @@ def GSS_filter_epoching(working_directory,
         #        sfc = % of max grip force (e.g. 0.25%)
         #    5. end_trial
         
-   #%%       
+        
         """ Get Triggers & save as Annotations object """
         
         # get trigger timestamps and trigger descriptions
-        trigger_descriptions = gss_ICAed_Raw.annotations.description.tolist()
-        trigger_timestamps = gss_ICAed_Raw.annotations.onset.tolist()   
-        
+        trigger_descriptions = gss_Raw.annotations.description.tolist()
+        trigger_timestamps = gss_Raw.annotations.onset.tolist()   
         
         # Have a look at the descriptions: 
         # print(trigger_descriptions)
-        # The sensor seems to start mid-experiment, this is a bit weird. 
-        # So apparently there is no b0 trigger.
     
         """ get block onsets & crop eeg_Raw to seperate blocks """
         if "block0" in trigger_descriptions:
@@ -358,19 +153,27 @@ def GSS_filter_epoching(working_directory,
         # if the trigger block1 is in the list of trigger descriptions, save onset.
         if "block1" in trigger_descriptions:
             b1_onset = trigger_timestamps[trigger_descriptions.index("block1")]
+        else:
+            # this shouldn't happen, but in the test dataset, 
+            # I only have a few trials from block 0, 
+            # so I'll set the onset as onset of the trigger timestamps 
+            # and offset as offset of the trigger timestamps. 
+            b1_onset = trigger_timestamps[0]
             
         # if the trigger block3 is in the list of trigger descriptions, save onset.
         if "block3" in trigger_descriptions:
             b3_onset = trigger_timestamps[trigger_descriptions.index("block3")]
+        else: 
+            # if there's no block 3 in the data, set offset 
+            # as end of the dataset (aka last timestamp)
+            b3_onset = trigger_timestamps[len(trigger_timestamps)-1]
             
         #save data from block 0 (training)
         #b_test_Raw = eeg_Raw.copy().crop(tmin = b0_onset, tmax = b1_onset)
     
         # exclude training block and block 3 (or just exclude training, if there is no block 3)
-        if "block3" in trigger_descriptions:
-            b_main_Raw = gss_ICAed_Raw.copy().crop(tmin = b1_onset, tmax = b3_onset)
-        else:
-            b_main_Raw = gss_ICAed_Raw.copy().crop(tmin = b1_onset)
+        b_main_Raw = gss_Raw.copy().crop(tmin = b1_onset, tmax = b3_onset)
+
 
  #%% 
         """ create epochs, only use data from blocks 1 & 2 """
@@ -432,27 +235,192 @@ def GSS_filter_epoching(working_directory,
         gss_epochs_metadata.columns = ["feedback", "sfb", "sfc"]
 
 #%%
-        """ get epochs, apply baseline correction on the fly """
-        # event = trial start, cut from -1.5 to +7           
-        trial_epochs = mne.Epochs(b_main_Raw, trial_events, trial_event_id, 
-                                  tmin = - 1.5, tmax = 7, baseline = (-1.5, 0), 
-                                  preload = True, event_repeated = "drop",
-                                  reject_by_annotation = False, metadata = gss_epochs_metadata) # metadata = pass
+        """ get epochs """
+        # event = trial start, cut from 0 to 6 (in seconds, measured from trial start)         
+        gss_epochs = mne.Epochs(b_main_Raw, 
+                                trial_events, 
+                                trial_event_id, 
+                                tmin = 0, 
+                                tmax = 6, 
+                                baseline = None,
+                                preload = True, 
+                                event_repeated = "drop",
+                                reject_by_annotation = False, 
+                                metadata = gss_epochs_metadata) # metadata = pass
         
-        # plot the epochs (only plot the first 2 or else it gets super messy)
-        #trial_epochs.plot(show_scrollbars = True, n_epochs = 2)
+        # plot the epochs (only plot the first 3 or else it gets super messy)
+        # Have a look at the first epoch: There's a break where the Arduino stopped recording.
+        # The other ones look okay tho.
+        #trial_epochs.plot(show_scrollbars = True, n_epochs = 3, scalings = 'auto')
         
-        # this is how you can select epochs based on the metadata:
-        #trial_epochs['sfc == 0.25'].plot()
-        # ...or select multiple values:
-        #search_values = ['0,25', '.3']
-        # more on how to use the metadata: 
-        # https://mne.tools/dev/auto_tutorials/epochs/30_epochs_metadata.html
+        
+  #%%        
+        """ Hampel Filter """
+              
+        # There's another problem besides the Arduino only recording during trials: 
+        # In the trials, there are single sample points missing.
+        
+        # Solution: Hampel Filter
+        #https://towardsdatascience.com/outlier-detection-with-hampel-filter-85ddf523c73d
+
+
+        """ check if the filter works: """
+            
+        # # get a random epoch, insert a 0 at a random index to create a "break"
+        # simu_epoch = pd.Series(gss_epochs.get_data(item = 5)[0][0])
+        # simu_epoch[34] = 0
+        
+        # # set sampling rate
+        # sample_rate = 80
+        
+        # # create time vector
+        # times = np.linspace(0, len(simu_epoch)/sample_rate, sample_rate, endpoint = False) 
+        
+        # # use Hampel filter on data
+        # simu_epoch_after = hampel(simu_epoch, window_size = 3, n = 2, imputation = True)
+        
+        # # plot signal before and after having used the Hampel filter
+        # plt.figure(figsize=(8, 4))   
+        # plt.plot(times[:sample_rate], simu_epoch[:sample_rate], color='red', alpha = 1, linestyle = 'dotted')
+        # plt.plot(times[:sample_rate], simu_epoch_after[:sample_rate], color='teal', alpha = 0.5)
+        # plt.xlabel('Zeit (in s)')
+        # plt.ylabel('Amplitude (in V)')
+        # plt.legend(['Signal vor dem Filtern', 'Signal nach dem Filtern'], loc = 'lower right')
+        # plt.show()
+        # plt.savefig('/Users/merle/Desktop/Masterarbeit/Plots/Hampel_example.pdf')
+        # # hooray! :-D
+
+
+        """ loop epochs & apply Hampel filter """
+        
+        # get data from Raw object containing all epochs
+        epochs_data = gss_epochs.get_data()
+        epochs_data_hamfilt = list()
+
+        for epoch_idx in range(0, len(epochs_data)):
+            
+            # get epoch data
+            epoch = epochs_data[epoch_idx,:,:][0]
+        
+            # convert to pandas.Series object
+            epoch = pd.Series(epoch)
+        
+            # apply Hampel filter (detect outliers & )
+            epoch_hampeled = hampel(epoch, window_size = 3, n = 2, imputation = True)
+
+            # put data back in df
+            #epochs_data[epoch_idx,:,:] = epoch_hampeled
+
+            epochs_data_hamfilt.append(list(epoch_hampeled))
+
+
+        # Plot the epochs:
+        # # set sampling rate
+        # sample_rate = 80
+
+        # for epoch_idx in range(0, len(epochs_data)):
+            
+        #     # get unfiltered and hampel-filtered data 
+        #     unfiltered = epochs_data[epoch_idx,:,:][0]
+        #     filtered = epochs_data_hamfilt[epoch_idx]
+            
+        #     # create time vector
+        #     times = np.linspace(0, len(filtered)/sample_rate, sample_rate, endpoint = False) 
+        
+        
+        #     # plot signal before and after having used the Hampel filter
+        #     plt.figure(figsize=(8, 4))   
+        #     plt.plot(times[:sample_rate], unfiltered[:sample_rate], color='indianred', alpha = 1)
+        #     plt.plot(times[:sample_rate], filtered[:sample_rate], color='teal', alpha = 1, linestyle = 'dotted')
+        #     plt.xlabel('Zeit (in s)')
+        #     plt.ylabel('Amplitude (in V)')
+        #     plt.title('epoch ' + str(epoch_idx))
+        #     plt.legend(['Signal vor dem Filtern', 'Signal nach dem Filtern'], loc = 'lower right')
+        #     plt.show()
+        
+
+ #%%      
+        """ 6.2.1 EMD (empirical mode decomposition) """
+        # (to get rid of motor / heart artifacts if there are any in the signal)
+        # Which different oscillations are there in the signal 
+        # that are non-linear or non-stationary? 
+        #--> https://emd.readthedocs.io/en/stable/
+    
+        # loop hampel filtered epochs
+        for epoch_idx in range(0, len(epochs_data_hamfilt)):
+                        
+            # get epoch data:
+            epoch = np.array(epochs_data_hamfilt[epoch_idx])
+
+            # estimate IMFs (=intrinsic mode functions)
+            imf = emd.sift.sift(epoch)
+            
+            # exclude last component because it's only the residual trend
+            imf_excl = imf[:, 0:len(imf[0,:])-1]           
+
+            # the first IMF contains high freq components (in EEG mostly artifacts)
+            # but I assume in the gss data, those are the IMFs with the 
+            # highest amount of signals so keep those before I exclude anything important!
+            
+            # project back to 1 signal (without the component we excluded)
+            
+            # save first IMF 
+            preprocd_gss_signal = imf_excl[:, 0] 
+            # loop & add the rest of the IMFs
+            for imf_nr in range(1, len(imf_excl[0])):
+                preprocd_gss_signal = preprocd_gss_signal + imf_excl[:, imf_nr]           
+                        
+            # plot it!
+            # plot old signal (aka signal before exclusion) in red + dotted line
+            #plt.plot(epoch, color = "red", alpha = 1, linestyle="dotted")
+            # plot new signal (without last IMF) in blue
+            #plt.plot( preprocd_gss_signal, color = "steelblue", alpha = 1)
+            #plt.show()
+
+            # put new preprocessed signal back into Raw object so we 
+            # don't loose the information on the conditions in the trial            
+                                    
+            gss_epochs._data[epoch_idx,0,:] = preprocd_gss_signal
+
+ 
+ #%% 
+ 
+        """ 6.2.3 filter GSS data """
+        # (variables are created as function arguments)
+                
+        #gss_bandpass_fmin = 4 
+        #gss_bandpass_fmax = 12 
+        #gss_phase = "zero" 
+        #gss_window_type = 'hamming' 
+        #gss_fir_design = 'firwin' 
+        #gss_n_jobs = 1 
+        
+        gss_epochs_filtered = gss_epochs.copy()
+        gss_epochs_filtered.filter(l_freq = gss_bandpass_fmin, 
+                                   h_freq = gss_bandpass_fmax,   
+                                   phase = gss_phase,
+                                   fir_window = gss_window_type, 
+                                   fir_design = gss_fir_design, 
+                                   n_jobs = gss_n_jobs)
+        
+        # plot unfiltered signal in blue
+        #gss_epochs.plot(picks = "all", scalings = "auto", n_epochs = 1, show_scrollbars=True)
+        
+        # loop epochs, plot data before and after filtering
+        #for epoch_nr in range(0, len(gss_epochs)):   
+        #    # plot unfiltered signal in blue
+        #    before = gss_epochs._data[epoch_nr,0,:]
+        #    after = gss_epochs_filtered._data[epoch_nr,0,:]
+        #    
+        #    plt.plot(before, color = "red", alpha = 0.5)
+        #    plt.plot(after, color = "blue", alpha = 0.5)
+        #    plt.show()
+
 
     #%%         
         """ 7. save Raw object & epoched data for each participant in the file 
         I set as the working directory at the beginning of the script """
-        trial_epochs.save(fname = "gss_participant" + str(participant) + "_epo.fif", fmt = 'single', overwrite = False)
+        gss_epochs_filtered.save(fname = "gss_participant" + str(participant) + "_epo.fif", fmt = 'single', overwrite = False)
 
     
         # save number of processed files
@@ -475,5 +443,4 @@ def GSS_filter_epoching(working_directory,
         
     
 # END FUNCTION
-
 
