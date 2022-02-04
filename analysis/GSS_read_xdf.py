@@ -1,7 +1,7 @@
 """
 Function for reading in GSS data from xdf files
-
 Part of Merle's Master Thesis
+
 Version 1: 4.2.2021
 
 Input: File containing .xdf files with GSS data for each participant
@@ -9,7 +9,7 @@ Output: .csv file containing GSS data + triggers for each participant
 
 """
 #%%
-#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/trmr_fdbck_ms/"
 
 # create function to read in data automatically
 def read_in_GSS(working_directory):
@@ -73,7 +73,7 @@ def read_in_GSS(working_directory):
     
         # Raise a hue & cry if data doesn't have 4 streams!
         assert len(streams) == 4  # 1 EEG markers (?), 1 EEG, 1 stim trigger channel, 1 gss channel
-    
+
         
         """ 4.2 Build NME data object from scratch """
         # stream 0: general info? actiCHampMarkers (whatever that is)
@@ -201,6 +201,7 @@ def read_in_GSS(working_directory):
             
         # get names of triggers (it's a nested list in the xdf file)    
         trigger_descriptions = streams[trig_idx]["time_series"]
+
         # turn nested list into "normal" one dimensional list
         trigger_descriptions = list(chain.from_iterable(trigger_descriptions)) 
         
@@ -328,7 +329,7 @@ def read_in_GSS(working_directory):
                             # get data for current epoch
                             curr_epoch_data = epoch_data_all[epoch_idx]
                             # get timestamps for current epoch
-                            curr_epoch_timestamps = epoch_data_all[epoch_idx]
+                            curr_epoch_timestamps = epoch_timestamps_all[epoch_idx]
                             
                         # if it's longer than tmax, you have to cut it!
                         else: 
@@ -337,7 +338,7 @@ def read_in_GSS(working_directory):
                             # at the end so it has the right length:
                             curr_epoch_data = epoch_data_all[epoch_idx][ :tmax]
                             # get timestamps for current epoch
-                            curr_epoch_timestamps = epoch_data_all[epoch_idx][ :tmax]
+                            curr_epoch_timestamps = epoch_timestamps_all[epoch_idx][ :tmax]
 
                         # save information on conditions as well as timestamps & data in list
                         epoch_data.append([block, sfb, sfc, feedback, curr_epoch_timestamps, curr_epoch_data])
@@ -397,3 +398,4 @@ def read_in_GSS(working_directory):
 # run function
 # read_in_GSS(working_directory)
 
+  
