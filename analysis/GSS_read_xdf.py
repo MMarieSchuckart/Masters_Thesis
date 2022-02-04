@@ -262,6 +262,8 @@ def read_in_GSS(working_directory):
         
         # empty list for collecting info and data for the epochs
         epoch_data = []
+        timeseries = []
+        timestamps = []
         
         # loop timestamps
         for trigger_idx in range(0, len(trial_timestamps)):
@@ -327,21 +329,25 @@ def read_in_GSS(working_directory):
                         if len(epoch_data_all[epoch_idx]) <= tmax:
                         
                             # get data for current epoch
-                            curr_epoch_data = epoch_data_all[epoch_idx]
+                            timeseries.append(epoch_data_all[epoch_idx])
                             # get timestamps for current epoch
-                            curr_epoch_timestamps = epoch_timestamps_all[epoch_idx]
+                            timestamps.append(epoch_timestamps_all[epoch_idx].tolist())
                             
+
                         # if it's longer than tmax, you have to cut it!
                         else: 
                            
                             # get data for current epoch, but cut off some samples 
                             # at the end so it has the right length:
-                            curr_epoch_data = epoch_data_all[epoch_idx][ :tmax]
-                            # get timestamps for current epoch
-                            curr_epoch_timestamps = epoch_timestamps_all[epoch_idx][ :tmax]
+                            
+                            # get data
+                            timeseries.append(epoch_data_all[epoch_idx][ :tmax])
+                            # get timestamps
+                            timestamps.append(epoch_timestamps_all[epoch_idx][ :tmax].tolist())
 
                         # save information on conditions as well as timestamps & data in list
-                        epoch_data.append([block, sfb, sfc, feedback, curr_epoch_timestamps, curr_epoch_data])
+                        epoch_data.append([block, sfb, sfc, feedback])
+                                                
 
                     # don't look at the other epochs for this 
                     # trigger as we already found a match!
@@ -357,11 +363,15 @@ def read_in_GSS(working_directory):
 
 
         # turn list with epoch data into dataframe:
-        gss_epochs = pd.DataFrame(epoch_data, columns=["block", "sfb", "sfc", "feedback", "time_stamps", "time_series"])
+        gss_epochs = pd.DataFrame(epoch_data, columns=["block", "sfb", "sfc", "feedback"])
 
+        # append list of numpy arrays for time stamps and time series data as columns to df
+        gss_epochs["time series"] = timeseries
+        gss_epochs["time stamps"] = timestamps
+        
         # runtime for this is a bit longer than necessary because we're always 
         # looping all epochs (also the ones we already found) but f*** it.
-    
+
 
 #%% 
         """ Exclude training block and block 3 """
