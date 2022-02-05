@@ -19,7 +19,7 @@ def read_in_GSS(working_directory):
         
     # pyxdf for reading in xdf data:
     import pyxdf
-    
+        
     # glob for getting all files in a directory
     import glob
     
@@ -32,11 +32,20 @@ def read_in_GSS(working_directory):
     # for dataframes as in R
     import pandas as pd
     
+    # Python MNE for time series data analysis / processing:
+    # NME should be active by default and should already have the 
+    # necessary dependencies included    
+    import mne
+    
     # for turning nested list into 1D list
     from itertools import chain
     
     # for plotting
     from matplotlib import pyplot as plt
+    
+    # Please make sure you pip installed the hampel package:
+    #pip install hampel
+    from hampel import hampel
     
     # write small function to find out if a value is a float
     def isfloat(num):
@@ -150,6 +159,7 @@ def read_in_GSS(working_directory):
         # set onset of first epoch as onset of the recording
         epoch_counter = 0
         idx_epoch_start = 0
+        
         # create placeholders for nested lists for epoch data
         epoch_timestamps_all = []
         epoch_data_all = []
@@ -166,23 +176,75 @@ def read_in_GSS(working_directory):
                 # turn weird nested list into 1D list
                 epoch_data = list(chain.from_iterable(epoch_data)) 
                 
-                # transform all values in gss_data from Microvolt to Volt 
-                # as NME expects time series data of type "eeg" to be measured in Volt (why tho)
-                # and I assume that the GSS measures in mV?
-                #for i in range(0, len( epoch_data)-1):
-                #    epoch_data[i] *= 1e-6
-    
-                # put into nested array
-                epoch_timestamps_all.append(epoch_timestamps)
+                # put into nested arrays
                 epoch_data_all.append(epoch_data)
+                # hint: you need to turn the timestamps array into a 1D list or else 
+                # it's not saved correctly (idk why this is only the case with the timestamps)
+                epoch_timestamps_all.append(epoch_timestamps.tolist())
                 
                 # find next epoch! 
                 idx_epoch_start = idx + 1
                 epoch_counter += 1
         
+         
+                        
+#%%
+        """ Exclude epochs that are too short """
+        # shouldn't happen but you never know
+        
+        # Let's say we exclude all epochs where there's more 
+        # than 1 sec aka 80 samples missing.
+        
+        # count how many epochs had to be excluded
+        epochs_excluded = 0
+        
+        # get length of each epoch array
+        epoch_sizes = []
+        for epoch_idx in range(0, len(epoch_data_all)):
+            epoch_sizes.append(len(epoch_data_all[epoch_idx]))
+
+        # get length of longest epoch (aka max. number of samples)
+        max_size = max(epoch_sizes)
+        #--> keep in mind we did this, we'll use max_size again later!
+        
+        # loop epochs 
+        for epoch_idx in range(0, len(epoch_data_all)-1):
+            
+            # if current epoch is too short...
+            if len(epoch_data_all[epoch_idx]) < max_size - 80:
+            
+                # ...exclude epoch from epoch_data_all, epoch_timestamps_all and epoch_sizes
+                del epoch_data_all[epoch_idx]
+                del epoch_timestamps_all[epoch_idx]
+                del epoch_sizes[epoch_idx]
+                
+                # add 1 excluded epoch to counter
+                epochs_excluded += 1
+                print(str(epochs_excluded) +" epoch(s) had to be excluded because\nthere was more than 1 sec missing.")
+        
+        
 #%% 
+        """ Small overview so the next parts make sense: """ 
+
+        # What I'll do now is:
+
+        # 1. get trigger descriptions, change descriptions so 
+        #    they contain info on sfc, sfb, feedback & block
+            
+        # 2. get only descriptions + timestamps of trial start triggers
+        
+        # 3. check if there's a matching trigger for each epoch
+        
+        # 4. exclude epochs I can't find a trigger for
+        
+        # 4. for all trigger-epoch-matches, save info on sfc, sfb, feedback & block in df
+                
+        
+        # Okay so there are going to be a lot of loops now. :-)
+        
+    #%% 
         """ Get Triggers """
-    
+        
         # max_force_xxx -> initial maximum grip force of participant
         # block -> Blocks 0 - 3
         # Block 0 = training 
@@ -198,7 +260,7 @@ def read_in_GSS(working_directory):
         #        sfb = scaling feedback  
         #        sfc = % of max grip force (e.g. 0.25%)
         #    5. end_trial
-            
+                
         # get names of triggers (it's a nested list in the xdf file)    
         trigger_descriptions = streams[trig_idx]["time_series"]
 
@@ -206,17 +268,17 @@ def read_in_GSS(working_directory):
         trigger_descriptions = list(chain.from_iterable(trigger_descriptions)) 
         
         """ 4.3.1.1 change trigger descriptions so the trial start descriptions 
-        contain info on the block & feedback condition """
-        
+                    contain info on the block & feedback condition """
+            
         # start with block 0:
         block_nr = "block0"
-    
+        
         for i in range(len(trigger_descriptions)):
             # get trigger name
             trigger_descr = trigger_descriptions[i]
-            
+                
             # check if a new block begins:
-           
+               
             # If the current trigger starts with "block", but doesn't correspond to the current block,
             # change name of current block.
             if trigger_descr[0:5] == "block" and trigger_descr!= block_nr:
@@ -228,17 +290,17 @@ def read_in_GSS(working_directory):
             elif trigger_descr[0:2] == "ep":
                 #... save feedback condition of the current epoch
                 curr_epoch = trigger_descr[6:-6]
-            
+                
             # else if the trigger is not a new block name &
             # if the name starts with t (as in trial_start)...    
             elif trigger_descr[0] == "t":
-                
-                #... concatenate trial name and epoch name & block number, divided by an underscore
+                #... concatenate trial name and epoch name & block number, 
+                # divided by an underscore
                 trigger_descriptions[i] = trigger_descr + "_" + curr_epoch + "_" + block_nr
-            
-     
+                
+                
 #%%
-        """ cut epochs to segments of 6s after trial start """
+        """ find matching epoch for each trigger """
         
         # get all timestamps of trial starts
         # find indices
@@ -251,140 +313,225 @@ def read_in_GSS(working_directory):
         trial_descriptions = np.array(trigger_descriptions)[trial_start_idx]
         
         
-        # Now cut epochs:
-        
-        # we want 6 seconds aka 6 * 80 sample points, starting at trial start
-        tmax = 6 * 80 
-        
-        # count how many epochs are excluded or not found
-        epochs_excluded = 0
-        epochs_not_found = 0
-        
-        # empty list for collecting info and data for the epochs
-        epoch_data = []
-        timeseries = []
-        timestamps = []
+        # empty list for collecting information on sfb, sfc and 
+        # feedback for the epochs
+        gss_epochs_conditions = []
+        exclude_these_epochs = []
         
         # loop timestamps
         for trigger_idx in range(0, len(trial_timestamps)):
 
             # get current trigger we're trying to find a matching epoch for!
             curr_trig_timestamp = trial_timestamps[trigger_idx]
-            
-            # initialize check if matching epoch for current trigger was found
+
+            # we haven't found an epoch for this trigger yet, so...            
             found_epoch = False
-            
+
             # loop epochs            
             for epoch_idx in range(0, len(epoch_data_all)):
                 
                 # get first timestamp from current epoch
                 curr_epoch_onset = epoch_timestamps_all[epoch_idx][0]
-                
+                 
                 # if there are less than 200 ms between the trial start trigger and 
-                # the epoch onset...
+                # the epoch onset, they proooobably belong together
                 if curr_epoch_onset - curr_trig_timestamp < 0.2 and curr_epoch_onset - curr_trig_timestamp > - 0.2:
-                    print("Found epoch for trigger " + str(trigger_idx) + "! Cutting Epoch Nr " + str(epoch_idx) + " now.")
+                    
+                    print("Found epoch for trigger " + str(trigger_idx) + "!")
                     found_epoch = True
                     
-                    # cut epoch so it has a duration of about 6s from trial onset 
-                    # (or rather from the first sample)
+                    # get sfb condition from trigger description for current epoch
+                    sfb = trial_descriptions[trigger_idx][16:20]
+                    # shorten sfb if last digit is _
+                    if sfb[3] == "_":
+                        sfb = sfb[0:3]
                     
-                    # index of epoch onset is 0
-                    # get index of intended epoch offset (index + tmax, 
-                    # in our case 6s aka 6 * 80 samples)
+                    # get sfc condition from trigger description for current epoch
+                    sfc = trial_descriptions[trigger_idx][-14:-10]
+                    # shorten sfc if first digit is _
+                    if sfc[0] == "_":
+                        sfc = sfc[1:]
+                        
+                    # typecast sfb and sfc to floats
+                    sfb = float(sfb)
+                    sfc = float(sfc)
                     
-                    # if there's more than 1 sec (aka 1 * 80 samples) of 
-                    # the epoch missing, exclude epoch:
-                    if len(epoch_data_all[epoch_idx]) <= tmax - 80:
-                        # ignore epoch and count as excluded:
-                        epochs_excluded += 1
-                        
-                    # if the epoch is long enough to use it...
-                    else: 
+                    # get feedback condition from trigger description for current epoch
+                    feedback = trial_descriptions[trigger_idx][-9:-7]
                     
-                        # get sfb condition from trigger description for current epoch
-                        sfb = trial_descriptions[trigger_idx][16:20]
-                        # shorten sfb if last digit is _
-                        if sfb[3] == "_":
-                            sfb = sfb[0:3]
-                        
-                        # get sfc condition from trigger description for current epoch
-                        sfc = trial_descriptions[trigger_idx][-14:-10]
-                        # shorten sfc if first digit is _
-                        if sfc[0] == "_":
-                            sfc = sfc[1:]
-                            
-                        # typecast sfb and sfc to floats
-                        sfb = float(sfb)
-                        sfc = float(sfc)
-                        
-                        # get feedback condition from trigger description for current epoch
-                        feedback = trial_descriptions[trigger_idx][-9:-7]
-                        
-                        # get block nr from trigger description for current epoch
-                        block = trial_descriptions[trigger_idx][-6:]
+                    # get block nr from trigger description for current epoch
+                    block = trial_descriptions[trigger_idx][-6:]
 
-                        # if the epoch is max. as long as intended, 
-                        # you don't have to cut it. 
-                        if len(epoch_data_all[epoch_idx]) <= tmax:
-                        
-                            # get data for current epoch
-                            timeseries.append(epoch_data_all[epoch_idx])
-                            # get timestamps for current epoch
-                            timestamps.append(epoch_timestamps_all[epoch_idx].tolist())
-                            
-
-                        # if it's longer than tmax, you have to cut it!
-                        else: 
-                           
-                            # get data for current epoch, but cut off some samples 
-                            # at the end so it has the right length:
-                            
-                            # get data
-                            timeseries.append(epoch_data_all[epoch_idx][ :tmax])
-                            # get timestamps
-                            timestamps.append(epoch_timestamps_all[epoch_idx][ :tmax].tolist())
-
-                        # save information on conditions as well as timestamps & data in list
-                        epoch_data.append([block, sfb, sfc, feedback])
-                                                
-
+                    # epoch idx 
+                    epoch = epoch_idx
+                    # save information on conditions as well as timestamps & data in list
+                    gss_epochs_conditions.append([block, sfb, sfc, feedback, epoch])
+                                            
                     # don't look at the other epochs for this 
                     # trigger as we already found a match!
                     break
+
                 
             if found_epoch == False:
-                print("\nEpoch for trigger " + str(trigger_idx) + " could not be found! Sorry queen!")
-                # add 1 to counter for epochs that were not found:
-                epochs_not_found += 1
+                print("\nEpoch for trigger " + str(trigger_idx) + " could not be found! Sorry girl!")
+                
+                # save index of epoch
+                exclude_these_epochs = exclude_these_epochs + [epoch_idx]
                 
                 if len(epoch_data_all) < len(trial_timestamps):
-                    print("There are less epochs than trial onsets.\n")
+                    print("There are less epochs than trial onset triggers.")
+                if epochs_excluded == 1:
+                    print("Could be because 1 epoch had to\nbe excluded because it was too short.")
+                elif epochs_excluded > 1:
+                    print("Could be because " + str(epochs_excluded) + " epochs had to\nbe excluded because they were too short.")
 
-
-        # turn list with epoch data into dataframe:
-        gss_epochs = pd.DataFrame(epoch_data, columns=["block", "sfb", "sfc", "feedback"])
-
-        # append list of numpy arrays for time stamps and time series data as columns to df
-        gss_epochs["time series"] = timeseries
-        gss_epochs["time stamps"] = timestamps
-        
         # runtime for this is a bit longer than necessary because we're always 
         # looping all epochs (also the ones we already found) but f*** it.
+
+        # turn list with epoch data into dataframe:
+        gss_epochs_conditions = pd.DataFrame(gss_epochs_conditions, columns=["block", "sfb", "sfc", "feedback", "epoch"])
+            
+        
+        
+        """ PROBLEM!!!!!! """
+        
+        # Okay so I didn't include trigger info from 
+        # triggers with no matching epoch in gss_epoch_conditions.
+        # But in epoch_data_all, they're still included obvi. 
+        # So why do they have the same length???
+        len(gss_epochs_conditions)
+        len(epoch_data_all)
+        
+        
+        
+        
+        """ Exclude epochs no trigger was found for """
+        # small hack: indices are sorted in ascending order, 
+        # which means we'd mess the indices up if we remove rows. 
+        # And thats why I reverse the order. BAM!
+        # (Not that impressive but that's the hack actually.)
+        if len(exclude_these_epochs) > 0 :
+            for idx in sorted(exclude_these_epochs, reverse = True):              
+                del epoch_data_all[idx]
+                del epoch_timestamps_all[idx]
+                del epoch_sizes[idx]
+
+
+
 
 
 #%% 
         """ Exclude training block and block 3 """
         
-        # exclude block 0 (= training):
-        gss_epochs.drop(gss_epochs[gss_epochs.block == "block0"].index, inplace=True)
-        # exclude block 3:
-        gss_epochs.drop(gss_epochs[gss_epochs.block == "block3"].index, inplace=True)
+        # get indices of all epochs from block 0 (training) and block 3
+        idx_b0 = gss_epochs_conditions[gss_epochs_conditions.block == "block0"].index.tolist()
+        idx_b3 = gss_epochs_conditions[gss_epochs_conditions.block == "block3"].index.tolist()
+        idx_exclude_blocks = idx_b0 + idx_b3
+        
+        # same "hack" as before: reverse order of indices so this works
+        for idx in sorted(idx_exclude_blocks, reverse = True):              
+            del epoch_data_all[idx]
+            del epoch_timestamps_all[idx]
+            del epoch_sizes[epoch_idx]
+        
+        
+#%% 
+        """ Make sure epochs all have the correct length """
+        # Right now, there might be some epochs that are a few 
+        # sampling points shorter than others, but for being able to 
+        # use MNE Epochs, I need data arrays of the same length so that's a problem.
+        
+        # IDEA: Set max number of sample points, add more timestamps and 
+        # 0s as data if there are not enough.
+        
+        # Loop epochs, add 0s at the beginning of the data arrays and more 
+        # timestamps at the beginnig of the timestamp arrays so that each epoch 
+        # has exactly the same size (=> max_size).
+        # Doesn't matter if there are a few 0s at the beginning I guess,
+        # most people start pressing the force sensor a few ms after trial onset anyway.
+        
+        for epoch_idx in range(0, len(epoch_data_all)):
+            # check if epoch has the correct length. 
+            # If yes, go on to next epoch, if not, add 0s & additional 
+            # timestamps at the beginning of the epoch's arrays
+            if epoch_sizes[epoch_idx] < max_size:
+                
+                # get data & timestamps for current epoch
+                curr_epoch_data = epoch_data_all[epoch_idx]
+                curr_epoch_timestamps = epoch_timestamps_all[epoch_idx]            
+            
+                # get difference between max_size and length of current epoch
+                # (to determine how many additional timestamps & 0s we need)
+                diff_size = max_size - len(curr_epoch_data)
+
+                # get median difference between timestamps in array
+                timestamps_diff = np.median(np.array(curr_epoch_timestamps[1:]) - np.array(curr_epoch_timestamps[:-1]))
+
+                # do the following as often as needed to append "missing" 0s and timestamps
+                for i in range(0, diff_size):
+                    curr_epoch_data = [0.0] + curr_epoch_data
+                    curr_epoch_timestamps = [curr_epoch_timestamps[0] - timestamps_diff] + curr_epoch_timestamps
+
+                # mutate original dfs: put arrays back into epoch_data_all and epoch_timestamps_all
+                epoch_data_all[epoch_idx] = curr_epoch_data
+                epoch_timestamps_all[epoch_idx] = curr_epoch_timestamps
+
+                print("added " + str(diff_size) + " missing sample point(s) to epoch " + str(epoch_idx))
+
+        
+#%%
+        """ Create info for MNE Epochs object """
+
+        info_epochs = mne.create_info(ch_names = ['GSS'], 
+                                   ch_types = ['eeg'], 
+                                   sfreq = 80)
+        
+        # look at the info
+        # print(info_epochs)
+        
+             
+#%%         
+        """ Create MNE Epochs object """
+
+        # first, change data shape a little
+        
+        # create a 2D array
+        data_gss_epochs = np.array(epoch_data_all)
+
+        # change the shape of the 2D array to 3D array 
+        # by adding 1 dimension
+        data_gss_epochs = np.reshape(data_gss_epochs, (data_gss_epochs.shape[0], 1, data_gss_epochs.shape[1])) 
+
+        # check size, should be 3D numpy array with shape 
+        # (n_epochs, n_channels = 1, n_samples)
+        # print(data_gss_epochs.shape) 
+       
+        # Now create epochs object:
+        gss_epochs = mne.EpochsArray(data_gss_epochs, info_epochs)
+        
+        # plot it!
+        plt = gss_epochs.plot(n_epochs = 3, scalings = "auto", scalebar = True)
+        #plt.show()
+        
+        # Btw: In MNE, it's not possible to turn on axes descriptions
+        # (aka Volt and sec values at the axes ticks) for plotting epochs. 
+        # So I'm afraid you can't see when exactly something is 
+        # happening or how high the amplitudes are. I felt like a complete 
+        # moron asking this in the forum because I thought I just overlooked 
+        # a function argument but I didn't. 
+        # Could build a plot by hand now but naah.
+        
+        # Anyway. As you can see, there are sometimes missing data 
+        # points in the signal. We'll fix that later in the preproc script. :-)
+  
+#%% 
+      
+        """ Fix the following bit! """
 
 
 #%% 
         """ 4.5 save df with epoched data for each participant in the working directory """ 
-        gss_epochs.to_csv(path_or_buf = working_directory + "gss_participant" + str(participant) + "_raw_epo.csv")
+        #gss_epochs.save(path_or_buf = working_directory + "gss_participant" + str(participant) + "_raw_epo.csv")
             
         
     ### END LOOP PARTICIPANTS 
