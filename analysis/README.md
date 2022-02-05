@@ -72,10 +72,6 @@ The data that I use to write the scripts right now are from a pilot study with a
 (I'll add functions for the GSS stats parts later)
 
 
-## Scripts with "TESTDATEN" in the filename:
-I only have a single test dataset for writing my scripts so Julius sent me a few datasets from another study (?) that also contain tremor data. I used those to test the GSS scripts. All scripts with TESTDATEN in front are scripts for reading them in or preprocessing them.
-
-
 ## Contents of the old scripts
 
 ### Reading in and preprocessing data:
