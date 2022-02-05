@@ -1,4 +1,4 @@
-# Welcome to the file graveyard :elephant:
+# Welcome to the File Graveyard :elephant:
 
 Mufasa: Look, Simba! Everything the light touches is our kingdom.
 
