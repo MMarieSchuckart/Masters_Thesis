@@ -248,7 +248,7 @@ def GSS_filter_epoching(working_directory,
     #%%         
         """ 7. save Raw object & epoched data for each participant in the file 
         I set as the working directory at the beginning of the script """
-        gss_epochs.save(fname = "gss_participant" + str(participant) + "_epo.fif", fmt = 'single', overwrite = False)
+        gss_epochs.save(fname = "gss_participant" + str(participant) + "_filtered_epo.fif", fmt = 'single', overwrite = False)
         #gss_epochs_filtered.save(fname = "gss_participant" + str(participant) + "_epo.fif", fmt = 'single', overwrite = False)
 
     
@@ -265,12 +265,10 @@ def GSS_filter_epoching(working_directory,
         print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, something went wrong: I couldn't run the preproc function on any file. Maybe you should have a look at this.\n\n- - - - - - - - - - - - - - - - - - - - - ")
     
     elif file == 1:
-        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I filtered & epoched 1 file for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the file gss_participant1_epo.fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I filtered & epoched 1 file for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the file gss_participant1_filtered_epo.fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
         
     else:
-        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I filtered & epoched " + str(file) + " files for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the files gss_participant[number]_epo.fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I filtered & epoched " + str(file) + " files for you.\n\nHave a look at the file you set as a \nworking directory in the function call!\n\nI called the files gss_participant[number]_filtered_epo.fif\n\n- - - - - - - - - - - - - - - - - - - - - ")
         
     
 # END FUNCTION
-
-
