@@ -9,7 +9,7 @@ Output: .csv file containing GSS data + triggers for each participant
 
 """
 #%%
-#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/trmr_fdbck_ms/"
+#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
 # create function to read in data automatically
 def read_in_GSS(working_directory):
@@ -42,11 +42,7 @@ def read_in_GSS(working_directory):
     
     # for plotting
     from matplotlib import pyplot as plt
-    
-    # Please make sure you pip installed the hampel package:
-    #pip install hampel
-    from hampel import hampel
-    
+        
     # write small function to find out if a value is a float
     def isfloat(num):
         try:
@@ -316,7 +312,12 @@ def read_in_GSS(working_directory):
         # empty list for collecting information on sfb, sfc and 
         # feedback for the epochs
         gss_epochs_conditions = []
-        exclude_these_epochs = []
+        
+        # we haven't found a trigger for any of the epochs yet, so put all of their indices in 
+        # exclude_these_epochs for a start 
+        # --> IDEA: Delete epoch index from this list if trigger was found for an epoch
+        #           This way, there will only be epochs left we couldn't find a trigger for.
+        exclude_these_epochs = list(range(0, len(epoch_data_all)))
         
         # loop timestamps
         for trigger_idx in range(0, len(trial_timestamps)):
@@ -339,6 +340,8 @@ def read_in_GSS(working_directory):
                     
                     print("Found epoch for trigger " + str(trigger_idx) + "!")
                     found_epoch = True
+                    # remove epoch from list of epochs no trigger could be found for
+                    exclude_these_epochs.remove(epoch_idx)
                     
                     # get sfb condition from trigger description for current epoch
                     sfb = trial_descriptions[trigger_idx][16:20]
@@ -375,9 +378,6 @@ def read_in_GSS(working_directory):
             if found_epoch == False:
                 print("\nEpoch for trigger " + str(trigger_idx) + " could not be found! Sorry girl!")
                 
-                # save index of epoch
-                exclude_these_epochs = exclude_these_epochs + [epoch_idx]
-                
                 if len(epoch_data_all) < len(trial_timestamps):
                     print("There are less epochs than trial onset triggers.")
                 if epochs_excluded == 1:
@@ -390,21 +390,7 @@ def read_in_GSS(working_directory):
 
         # turn list with epoch data into dataframe:
         gss_epochs_conditions = pd.DataFrame(gss_epochs_conditions, columns=["block", "sfb", "sfc", "feedback", "epoch"])
-            
-        
-        
-        """ PROBLEM!!!!!! """
-        
-        # Okay so I didn't include trigger info from 
-        # triggers with no matching epoch in gss_epoch_conditions.
-        # But in epoch_data_all, they're still included obvi. 
-        # So why do they have the same length???
-        len(gss_epochs_conditions)
-        len(epoch_data_all)
-        
-        
-        
-        
+                    
         """ Exclude epochs no trigger was found for """
         # small hack: indices are sorted in ascending order, 
         # which means we'd mess the indices up if we remove rows. 
@@ -432,7 +418,7 @@ def read_in_GSS(working_directory):
         for idx in sorted(idx_exclude_blocks, reverse = True):              
             del epoch_data_all[idx]
             del epoch_timestamps_all[idx]
-            del epoch_sizes[epoch_idx]
+            del epoch_sizes[idx]
         
         
 #%% 
@@ -476,7 +462,7 @@ def read_in_GSS(working_directory):
                 epoch_data_all[epoch_idx] = curr_epoch_data
                 epoch_timestamps_all[epoch_idx] = curr_epoch_timestamps
 
-                print("added " + str(diff_size) + " missing sample point(s) to epoch " + str(epoch_idx))
+                print("\n\nadded " + str(diff_size) + " missing sample point(s) to epoch " + str(epoch_idx))
 
         
 #%%
@@ -510,8 +496,7 @@ def read_in_GSS(working_directory):
         gss_epochs = mne.EpochsArray(data_gss_epochs, info_epochs)
         
         # plot it!
-        plt = gss_epochs.plot(n_epochs = 3, scalings = "auto", scalebar = True)
-        #plt.show()
+        #gss_epochs.plot(n_epochs = 1, scalings = "auto")
         
         # Btw: In MNE, it's not possible to turn on axes descriptions
         # (aka Volt and sec values at the axes ticks) for plotting epochs. 
@@ -523,17 +508,14 @@ def read_in_GSS(working_directory):
         
         # Anyway. As you can see, there are sometimes missing data 
         # points in the signal. We'll fix that later in the preproc script. :-)
-  
-#%% 
-      
-        """ Fix the following bit! """
-
 
 #%% 
         """ 4.5 save df with epoched data for each participant in the working directory """ 
-        #gss_epochs.save(path_or_buf = working_directory + "gss_participant" + str(participant) + "_raw_epo.csv")
-            
-        
+        # save epochs
+        gss_epochs.save(fname = "gss_participant" + str(participant) + "_epo.fif", fmt = 'single', overwrite = False)
+        # save df with info on sfc, sfb, feedback, block & epoch idx
+        gss_epochs_conditions.to_csv(path_or_buf = working_directory + "gss_participant" + str(participant) + "_epo_conditions.csv")
+           
     ### END LOOP PARTICIPANTS 
     
 #%%    
