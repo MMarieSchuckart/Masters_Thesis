@@ -419,8 +419,12 @@ def read_in_GSS(working_directory):
             del epoch_data_all[idx]
             del epoch_timestamps_all[idx]
             del epoch_sizes[idx]
-        
-        
+            gss_epochs_conditions.drop(idx, inplace=True)
+            
+        # assign new indices in gss_epochs_conditions so the indices in the 
+        # epoch column still matches the epochs in the MNE epochs object:
+        gss_epochs_conditions["epoch"] = list(range(0, len(epoch_data_all)))
+
 #%% 
         """ Make sure epochs all have the correct length """
         # Right now, there might be some epochs that are a few 
@@ -536,5 +540,3 @@ def read_in_GSS(working_directory):
 
 # run function
 # read_in_GSS(working_directory)
-
-  
