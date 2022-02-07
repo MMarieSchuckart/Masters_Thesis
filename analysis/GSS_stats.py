@@ -61,12 +61,18 @@ def GSS_stats(working_directory,
 
     # Mauchly's test
     from pingouin import sphericity
-
-    # for computing the multiple linear regression 
-    # import statsmodels.formula.api as smf
     
-    # import function for t-test for 2 related samples
-    #from scipy.stats import ttest_rel
+    # rank transform data
+    from scipy.stats import rankdata
+    
+    # get one way repeated measures ANOVA
+    from pingouin import rm_anova
+    
+    # get one way repeated measures ANOVA
+    from pingouin import ttest
+    
+    # for getting all possible pairs from list
+    from itertools import combinations
     
     # for plotting
     import matplotlib.pyplot as plt
@@ -174,14 +180,14 @@ def GSS_stats(working_directory,
                             
                 # this is just for testing this part of the script, 
                 # I set these as arguments in the function call:
-                # gss_psd_sfreq = 80 
-                # gss_psd_fmin = 4 
-                # gss_psd_fmax = 12 
-                # gss_psd_n_overlap = 0 
-                # gss_psd_n_per_seg = None 
-                # gss_psd_n_jobs = 1
-                # gss_psd_average = 'mean' 
-                # gss_psd_window = 'hamming'
+                #gss_psd_sfreq = 80 
+                #gss_psd_fmin = 4 
+                #gss_psd_fmax = 12 
+                #gss_psd_n_overlap = 0 
+                #gss_psd_n_per_seg = None 
+                #gss_psd_n_jobs = 1
+                #gss_psd_average = 'mean' 
+                #gss_psd_window = 'hamming'
 
 
                 # plot psd (no clue which Method this is, the MNE docs don't want me to know this)
@@ -238,7 +244,6 @@ def GSS_stats(working_directory,
         
     # END loop participants
     
-    
     """ Compute pairwise comparisons """
     
     # 1st Hypothesis: Higher scaling of Feedback (sfc) should lead to higher tremor amplitudes, regardless of modality:
@@ -249,7 +254,18 @@ def GSS_stats(working_directory,
     #                     auditory and visual condition, but no difference auditory & visual feedback. 
     
 
-    """ TEST 1ST HYPOTHESIS """
+    """ TEST 1ST HYPOTHESIS  --> SFC """
+    
+    """ Aggregate dataframe """
+    # I need 1 value for each participant in each sfc condition
+    # --> aggregate dataframe
+    
+    sfc_aggregated = gss_PSDs_all.groupby(['ID', 'sfc']).mean()
+    # getting the mean for sfb doesn't make sense so delete that column
+    sfc_aggregated = sfc_aggregated.drop(['sfb'], axis=1)
+    # use sfc as column instead of index (you have to do this twice)
+    sfc_aggregated.reset_index(level = 0, inplace = True)
+    sfc_aggregated.reset_index(level = 0, inplace = True)
 
     """ Test Assumptions of t-Tests / ANOVAs to see if we can run parametrical tests """
     
@@ -280,9 +296,10 @@ def GSS_stats(working_directory,
     # If it's not significant, it couldn't be shown that it's not Gaussion (≠ it's Gaussian).
     
     # I want to collect my results in a df, so get info on the test, the data we tested and the results:
-    gss_results_df = pd.DataFrame(columns = ["test name", "data", "p-values", "test statistics", "df"])
+    gss_results_df = pd.DataFrame(columns = ["test name", "data", "p-values", "test statistics", 
+                                             "df", "effect size", "bayes factor", "power"])
     # get unique values in sfc
-    sfc_values = list(set(gss_PSDs_all["sfc"]))
+    sfc_values = list(set(sfc_aggregated["sfc"]))
     # save test name (once for each test we run)
     test_name = ["Shapiro-Wilk Test for Normality of Distribution"]  *  len(sfc_values)
     df = [None]  *  len(sfc_values)
@@ -293,7 +310,7 @@ def GSS_stats(working_directory,
     # loop sfc values, test distribution and save test results
     for sfc_val in sfc_values :
         # run shapiro wilk test
-        stat, p = shapiro(gss_PSDs_all[gss_PSDs_all["sfc"] == sfc_val]["power"])
+        stat, p = shapiro(sfc_aggregated[sfc_aggregated["sfc"] == sfc_val]["power"])
         # save results
         p_values.append(p)
         Test_statistics.append(stat)
@@ -315,50 +332,54 @@ def GSS_stats(working_directory,
     # before having checked the homogeneity of variance, we assume 
     # it's not given:
     run_parametrical_tests = False
+    # We also assume we don't have to use a Greenhouse-Geisser 
+    # correction for the ANOVA:
+    GG_correction = False
     
+    # get data (not a flexible approach if you add more sfc 
+    # levels but I don't care rn)    
+    sfc_2 = sfc_aggregated[sfc_aggregated["sfc"] == 0.2]["power"]
+    sfc_25 = sfc_aggregated[sfc_aggregated["sfc"] == 0.25]["power"]
+    sfc_3 = sfc_aggregated[sfc_aggregated["sfc"] == 0.3]["power"]
+    
+    # if all p-values of the Shapiro-Wilk tests were significant...
     if all(p > 0.05 for p in p_values):
         
         # Test assumption 5 - Normality of Distribution: 
         """ run Levene Test """
-
-        # get data (not a flexible approach if you add more sfc 
-        # levels but I don't care rn)
-        gr_1 = gss_PSDs_all[gss_PSDs_all["sfc"] == 0.2]["power"]
-        gr_2 = gss_PSDs_all[gss_PSDs_all["sfc"] == 0.25]["power"]
-        gr_3 = gss_PSDs_all[gss_PSDs_all["sfc"] == 0.3]["power"]
-
         # run Levene test, get p and test statistic        
-        stat, p = levene(gr_1, gr_2, gr_3)
+        stat, p = levene(sfc_2, sfc_25, sfc_3)
         
         # add to results df
         gss_results_df.loc[len(gss_results_df)] = ["Levene Test for Homogeneity of Variance", 
                                                    "all sfc groups", 
-                                                   p, stat, None]
+                                                   p, stat, None,
+                                                   None, None, None]
         
         # If the Levene test was not significant, this means the variances of the groups 
         # were more or less equal. If this is the case, 
         # go on with testing the last assumtion (aka the ANOVA assumption): Sphericity  
         if p > 0.05:
              run_parametrical_tests = True
-             
+
              # Test ANOVA assumption: Sphericity: 
              """ run Mauchly’s Test """
-             sphericity(gss_PSDs_all, dv = 'power', subject = 'ID', within = "sfc")
+             spher, stat, chi2, df, p = sphericity(sfc_aggregated, dv = 'power', subject = 'ID', within = "sfc")
              
-             
-             
-             
-             
-             
-        
-        
-        
-        # If the Levene test was signifcant, the variance differs between the groups, 
+             # append results to df
+             gss_results_df.loc[len(gss_results_df)] = ["Mauchly's Test for Sphericity", 
+                                                        "all sfc groups", 
+                                                        p, stat, df,
+                                                        None, None, None]
+             # if sphericity is not given, apply Greenhouse Geisser Correction
+             if p <= 0.05: 
+                 GG_correction = True
+
+        # else if the Levene test was signifcant, the variance differs between the groups, 
         # so assumption of homogeneity of variance is not given and we can't 
         # run parametrical tests without rank-transforming the data first. 
         # --> Keep run_parametrical_tests = False as we set it before running the Levene test.
         
-
     
     """ If assumptions are violated, rank-transform data """
     
@@ -369,19 +390,76 @@ def GSS_stats(working_directory,
     # Same applies if homogeneity of variance or sphericity is not given. 
     
     # If this is the case, rank transform data before using ANOVA & t-tests.
-    
-    elif any(p <= 0.05 for p in p_values) or run_parametrical_tests == False:
-        
-    
-    
-    
-    
-    
+    if (any(p <= 0.05 for p in p_values) or run_parametrical_tests == False):    
+        # if you have ties (aka >= 2x the same value), assign average rank
+        rank_sfc_2 = rankdata(sfc_2, method='average').tolist()
+        rank_sfc_25 = rankdata(sfc_25, method='average').tolist()
+        rank_sfc_3 = rankdata(sfc_3, method='average').tolist()
+
+        # mutate original pandas df:
+        # sort by sfc
+        sfc_aggregated = sfc_aggregated.sort_values(by=['sfc'])
+        # put rank transformed data into sfc column
+        sfc_aggregated["power"] = rank_sfc_2 + rank_sfc_25 + rank_sfc_3
+
+
     """ Repeated Measures ANOVA (for 3 dependent groups) """
+    sfc_anova_res = rm_anova(data =  sfc_aggregated, dv = "power", within = "sfc", subject = "ID")         
+    
+    # save results
+    stat = float(sfc_anova_res["F"])
+    p = float(sfc_anova_res["p-unc"])
+    df1 = float(sfc_anova_res["ddof1"])
+    df2 = float(sfc_anova_res["ddof2"])
+    
+    # append results to df
+    gss_results_df.loc[len(gss_results_df)] = ["one-way repeated measures ANOVA", 
+                                               "all sfc groups", 
+                                               p, stat, [df1, df2],
+                                               None, None, None]
              
-             
+    # if ANOVA is significant, run t-tests
+
+    # I assume more feedback (aka higher sfc) --> higher tremor amplitudes
+    # --> this is what I'll test in the t-test: 
+    #     0.25 > 0.2, 0.3 > 0.2 and 0.3 > 0.25
+    pairs = [(0.25, 0.2), (0.3, 0.2), (0.3, 0.25)]
+
+    for pair in pairs:   
+        # run one-sided t-test, assume x > y 
+       res = ttest(x = np.array(sfc_aggregated[sfc_aggregated["sfc"] == pair[0]]["power"]), 
+                   y = np.array(sfc_aggregated[sfc_aggregated["sfc"] == pair[1]]["power"]), 
+                   paired = True, 
+                   alternative = "greater")
+       
+       p = float(res["p-val"])
+       stat = float(res["T"])
+       df = float(res["dof"])
+       eff_size = float(res["cohen-d"])
+       bayes_factor = float(res["BF10"])
+       power = float(res["power"])
+       
+       # append results to df
+       gss_results_df.loc[len(gss_results_df)] = ["one-sided t-test", 
+                                                  "compare power in sfc: " + str(pair[0]) + " > " + str(pair[1]), 
+                                                  p, stat, df,
+                                                  eff_size, bayes_factor, power]
+       
+    
+    
+    
+    
+    
+    
+    # TO DO: Fix this:
+    
+    
+    """ TEST 2ND HYPOTHESIS --> FEEDBACK """
         
-    """ TEST 2ND HYPOTHESIS """
         
         
+    # save dataframe    
+    gss_results.to_csv()
+    # function returns results dataframe    
+    return(gss_results)
         
