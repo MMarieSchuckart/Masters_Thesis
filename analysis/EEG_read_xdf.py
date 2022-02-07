@@ -11,8 +11,8 @@ Output: .fif file containing EEG data + triggers for each participant
         
 #%% 
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
-        
-#%% 
+
+
 # create function to read in data automatically
 def read_in_EEG(working_directory):
 
@@ -60,10 +60,6 @@ def read_in_EEG(working_directory):
     # (the asterix in the path means the name of the 
     # file can be anything as long as it has an .xdf ending)
     file_list = glob.glob(working_directory + "*.xdf")
-
-    """ 4. Create empty lists to keep track of plots (before and after filtering)"""
-    #eeg_figs_before_filtering = []
-    #eeg_figs_after_filtering = []
     
     """ 5. keep track of participants """
     participant = 0
@@ -128,7 +124,6 @@ def read_in_EEG(working_directory):
                   
   #%% 
 
-        
         """ 6.2.1 Create info for Raw Object for EEG data"""
         # Sampling rate: 500 Hz
         sampling_freq = float(streams[eeg_idx]["info"]["nominal_srate"][0]) # in Hertz
@@ -327,4 +322,7 @@ def read_in_EEG(working_directory):
 
 # run function
 # read_in_EEG(working_directory)
+
+
+
 
