@@ -52,16 +52,22 @@ def GSS_stats(working_directory,
 
     # for dataframes as in R
     #import pandas as pd
+    
+    # Shapiro-Wilk test function
+    from scipy.stats import shapiro
+    
+    # Levene test function
+    from scipy.stats import levene
+
+    # Mauchly's test
+    from pingouin import sphericity
 
     # for computing the multiple linear regression 
-    import statsmodels.formula.api as smf
+    # import statsmodels.formula.api as smf
     
     # import function for t-test for 2 related samples
-    from scipy.stats import ttest_rel
-
-    # function for false detection rate (FDR) correction
-    #from statsmodels.stats.multitest import fdrcorrection as fdr
-
+    #from scipy.stats import ttest_rel
+    
     # for plotting
     import matplotlib.pyplot as plt
 
@@ -233,5 +239,149 @@ def GSS_stats(working_directory,
     # END loop participants
     
     
+    """ Compute pairwise comparisons """
     
-   
+    # 1st Hypothesis: Higher scaling of Feedback (sfc) should lead to higher tremor amplitudes, regardless of modality:
+    #                 Power in sfc: 20% < 25% < 30%
+    
+    # 2nd Hypothesis: Multisensory Feedback should evoke a stronger reaction aka higher tremor amplitude
+    #                 --> Power should be higher in multisensory feedback condition than in 
+    #                     auditory and visual condition, but no difference auditory & visual feedback. 
+    
+
+    """ TEST 1ST HYPOTHESIS """
+
+    """ Test Assumptions of t-Tests / ANOVAs to see if we can run parametrical tests """
+    
+    # Assumptions of t-Tests:
+    # 1. continuous or ordinal scale of scale of measurement --> given in our case
+    # 2. random sample = the data is collected from a representative, randomly selected portion of the 
+    #                    total population (more or less given, self-selection is real)
+    # 3. data in each group are normally distributed (--> check this!)
+    # 4. reasonably large sample size (ahahahahahahaha yes sure)
+    # 5. homogeneity of variance = Homogeneous (= equal) variance exists when 
+    #                              the standard deviations of samples are approximately equal.
+    
+    # Additional assumption of repeated measures ANOVAs:
+    # Sphericity: the variances of differences in responses between any 
+    #             two levels of the independent variable (within-subjects factor) 
+    #             should be equal. 
+    #             This means for 3 groups, you compute the differences between 
+    #             group 1 & 2 as well as between group 1 & 3 and group 2 & 3 
+    #             and then you check if homogeneity of variance of these differences is given. 
+    #             This assumption is therefore also known as 
+    #             homogeneity-of-variance-of-differences assumption. :-)
+        
+
+    # Test assumption 3 - Normality of Distribution: 
+    """ run Shapiro-Wilk Test """
+    # We need to test each group separately.
+    # If test is significant, distribution is not Gaussian.
+    # If it's not significant, it couldn't be shown that it's not Gaussion (≠ it's Gaussian).
+    
+    # I want to collect my results in a df, so get info on the test, the data we tested and the results:
+    gss_results_df = pd.DataFrame(columns = ["test name", "data", "p-values", "test statistics", "df"])
+    # get unique values in sfc
+    sfc_values = list(set(gss_PSDs_all["sfc"]))
+    # save test name (once for each test we run)
+    test_name = ["Shapiro-Wilk Test for Normality of Distribution"]  *  len(sfc_values)
+    df = [None]  *  len(sfc_values)
+    # empty lists for results
+    p_values = []
+    Test_statistics = []
+    data = []
+    # loop sfc values, test distribution and save test results
+    for sfc_val in sfc_values :
+        # run shapiro wilk test
+        stat, p = shapiro(gss_PSDs_all[gss_PSDs_all["sfc"] == sfc_val]["power"])
+        # save results
+        p_values.append(p)
+        Test_statistics.append(stat)
+        data.append("power in trials with sfc = " + str(sfc_val))
+    
+    # put everything into df
+    gss_results_df["test name"] = pd.Series(test_name)
+    gss_results_df["data"] = pd.Series(data)
+    gss_results_df["p-values"] = pd.Series(p_values)
+    gss_results_df["test statistics"] = pd.Series(Test_statistics)
+    gss_results_df["df"] = pd.Series(df)
+    
+    # If none of the p-values are significant, this could mean that all 
+    # distributions are Gaussian, so assumption #3 would be given.
+
+    # --> If all p-values are > 0.05, test homogeneity of variance 
+    # to find out if we can use parametrical tests
+    
+    # before having checked the homogeneity of variance, we assume 
+    # it's not given:
+    run_parametrical_tests = False
+    
+    if all(p > 0.05 for p in p_values):
+        
+        # Test assumption 5 - Normality of Distribution: 
+        """ run Levene Test """
+
+        # get data (not a flexible approach if you add more sfc 
+        # levels but I don't care rn)
+        gr_1 = gss_PSDs_all[gss_PSDs_all["sfc"] == 0.2]["power"]
+        gr_2 = gss_PSDs_all[gss_PSDs_all["sfc"] == 0.25]["power"]
+        gr_3 = gss_PSDs_all[gss_PSDs_all["sfc"] == 0.3]["power"]
+
+        # run Levene test, get p and test statistic        
+        stat, p = levene(gr_1, gr_2, gr_3)
+        
+        # add to results df
+        gss_results_df.loc[len(gss_results_df)] = ["Levene Test for Homogeneity of Variance", 
+                                                   "all sfc groups", 
+                                                   p, stat, None]
+        
+        # If the Levene test was not significant, this means the variances of the groups 
+        # were more or less equal. If this is the case, 
+        # go on with testing the last assumtion (aka the ANOVA assumption): Sphericity  
+        if p > 0.05:
+             run_parametrical_tests = True
+             
+             # Test ANOVA assumption: Sphericity: 
+             """ run Mauchly’s Test """
+             sphericity(gss_PSDs_all, dv = 'power', subject = 'ID', within = "sfc")
+             
+             
+             
+             
+             
+             
+        
+        
+        
+        # If the Levene test was signifcant, the variance differs between the groups, 
+        # so assumption of homogeneity of variance is not given and we can't 
+        # run parametrical tests without rank-transforming the data first. 
+        # --> Keep run_parametrical_tests = False as we set it before running the Levene test.
+        
+
+    
+    """ If assumptions are violated, rank-transform data """
+    
+    # If not all of the p-values from the Shapiro-Wilk tests 
+    # are > 0.05, at least one of the groups is not 
+    # normally distributed, which means parametrical 
+    # tests can't be used without rank-transforming the data first. 
+    # Same applies if homogeneity of variance or sphericity is not given. 
+    
+    # If this is the case, rank transform data before using ANOVA & t-tests.
+    
+    elif any(p <= 0.05 for p in p_values) or run_parametrical_tests == False:
+        
+    
+    
+    
+    
+    
+    """ Repeated Measures ANOVA (for 3 dependent groups) """
+             
+             
+        
+    """ TEST 2ND HYPOTHESIS """
+        
+        
+        
