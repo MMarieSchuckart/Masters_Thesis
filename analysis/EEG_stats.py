@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 """ Stats script for Merle's Master's Thesis
 
@@ -13,18 +15,18 @@ Version 1: 14.01.2022
 
 """ 1.2 Settings for power spectral density (PSD) analysis using Welch's Method """ 
 
-#psd_tmin = 1 
-#psd_tmax = 4
-#psd_sfreq = 500
-#psd_fmin = 4
-#psd_fmax = 36 
-#psd_n_overlap = 0 
-#psd_n_per_seg = None 
-#psd_n_jobs = 1
-#psd_average = 'mean'
-#psd_window = 'hamming'
+psd_tmin = 1 
+psd_tmax = 4
+psd_sfreq = 500
+psd_fmin = 4
+psd_fmax = 36 
+psd_n_overlap = 0 
+psd_n_per_seg = None 
+psd_n_jobs = 1
+psd_average = 'mean'
+psd_window = 'hamming'
 
-#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
 #%%
 
@@ -79,7 +81,7 @@ def EEG_stats(working_directory,
 
     # for plotting
     import matplotlib.pyplot as plt
-
+    
 
 #%%
 
@@ -303,7 +305,7 @@ def EEG_stats(working_directory,
 
 
              # run t-tests:
-             # for feedback vo
+             # for feedback
              p_feedback = ttest_1samp(tmp_betas["beta_feedback"], 0, axis=0, alternative='two-sided').pvalue
              T_feedback = ttest_1samp(tmp_betas["beta_feedback"], 0, axis=0, alternative='two-sided').statistic
 
@@ -332,9 +334,24 @@ def EEG_stats(working_directory,
              t_test_results.to_csv(working_directory + "t_test_results.csv", index = False, float_format='%.16g')
              beta_coeffs_res.to_csv(working_directory + "beta_coeffs_results.csv", index = False, float_format='%.16g')
 
+
+
 # END FUNCTION
 
 #%%
+
+    # For all combinations of channel & Frequency,  
+    # I checked whether there was a significant difference between the 
+    # experimental conditions (sfc & feedback)
+    
+    # exclude all p-values > 0.05
+    tmp_coherence_df = t_test_results[t_test_results.p_feedback <= .05]
+    # remove rows with T = inf or -inf
+    tmp_coherence_df = tmp_coherence_df[tmp_coherence_df.T_feedback != np.inf]
+    tmp_coherence_df = tmp_coherence_df[tmp_coherence_df.T_feedback != -np.inf]
+
+
+
 
 """ TO DO:"""
 # Which PSD Method (Welch or Multitaper)? 
