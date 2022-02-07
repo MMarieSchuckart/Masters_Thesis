@@ -9,12 +9,13 @@
 
 """ Before using this script...
 
-Please make sure the packages MNE, pyxdf and emd can be installed 
-on your machine if you have never used them before.
+Please make sure the packages MNE, pyxdf, emd and hampel 
+can be installed on your machine if you have never used them before.
 You might need to pip install them in your terminal:
      pip install pyxdf
      pip install mne
      pip install emd
+     pip install hampel
   
 If you can't pip install the latest stable pyxdf version directly, 
 try installing the latest developer version from github 
@@ -185,6 +186,7 @@ EEG_stats(working_directory = data_file)
 # hint: p-values are plotted in an R-Script called "Master_Plots"
 
 #%%
+
 """ ------------ Part 2: GSS DATA ANALYSIS ------------ """
 
 """ ---- 2.1 READ IN GRIP STRENGTH SENSOR (GSS) DATA ---- """
@@ -194,6 +196,11 @@ EEG_stats(working_directory = data_file)
 # The files from the output are saved in the WD as .fif files.
 
 read_in_GSS(working_directory = data_file)
+
+# If there are warnings because some annotations are outside the data range, 
+# this means the force sensor started recording later than the rest 
+# so there are triggers that are outside the range of the recorded GSS data.
+# So no worries, this is okay! :-)
 
 
 #%%
@@ -219,6 +226,7 @@ read_in_GSS(working_directory = data_file)
 #gss_n_jobs = 1
 # use zero-phase filter
 #gss_phase = "zero"
+
 
 """ Settings for Epoching: """
 # set cutoffs (in seconds) for epoching:
