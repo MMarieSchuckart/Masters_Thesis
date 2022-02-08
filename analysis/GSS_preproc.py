@@ -129,7 +129,7 @@ def GSS_filter_epoching(working_directory,
             # convert to pandas.Series object
             epoch = pd.Series(epoch)
         
-            # apply Hampel filter (detect outliers & )
+            # apply Hampel filter (detect outliers & impute (imputate?! idk) them)
             epoch_hampeled = hampel(epoch, window_size = 3, n = 2, imputation = True)
 
             # put data back in df
@@ -272,4 +272,3 @@ def GSS_filter_epoching(working_directory,
         
     
 # END FUNCTION
-
