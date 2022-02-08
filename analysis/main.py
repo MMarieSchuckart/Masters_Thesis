@@ -9,13 +9,14 @@
 
 """ Before using this script...
 
-Please make sure the packages MNE, pyxdf, emd and hampel 
+Please make sure the packages MNE, pyxdf, emd, pingouin and hampel 
 can be installed on your machine if you have never used them before.
 You might need to pip install them in your terminal:
      pip install pyxdf
      pip install mne
      pip install emd
      pip install hampel
+     pip install pingouin
   
 If you can't pip install the latest stable pyxdf version directly, 
 try installing the latest developer version from github 
@@ -184,6 +185,10 @@ EEG_filter_epoching(working_directory = data_file,
 EEG_stats(working_directory = data_file)
 
 # hint: p-values are plotted in an R-Script called "Master_Plots"
+
+
+
+
 
 #%%
 
