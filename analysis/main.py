@@ -191,9 +191,9 @@ EEG_stats(working_directory = data_file)
 
 """ ---- 2.1 READ IN GRIP STRENGTH SENSOR (GSS) DATA ---- """
 # Input: Raw GSS data (.xdf file)
-# Output: MNE Raw object containing 
-#         GSS values + timestamps + triggers as annotations
-# The files from the output are saved in the WD as .fif files.
+# Output: MNE Epochs object containing GSS values + timestamps
+#         CSV with epoch conditions (info on feedback, sfb, sfc, block, ID)
+# The files from the output are saved in the WD as .fif & .csv files.
 
 read_in_GSS(working_directory = data_file)
 
@@ -205,14 +205,14 @@ read_in_GSS(working_directory = data_file)
 
 #%%
 """ ---- 2.2 PREPROCESS GSS DATA ---- """
-# Input: MNE Raw object containing GSS data + triggers (Output from 1.1) 
-# Output: 
-    # MNE Epochs object containing filtered + epoched GSS data (Format: .fif)
-    # Plots: before and after filtering???
+# Input: MNE Epochs object containing GSS data + triggers (Output from 1.1) 
+# Output: MNE Epochs object containing filtered GSS data (Format: .fif)
 
 """ Settings for Filtering: """
-# get "4–12 Hz range since this range is where a majority 
-# of the tremor is contained" (Archer et al., 2018)
+# I commented the part with the filter out because we only perform a PSD 
+# analysis (4-12 Hz) later on so filtering out everything outside 
+# 4 - 12 Hz is a bit redundant. If you want to filter your data tho, 
+# you can just uncomment that section in the gss_preproc script again. :-)
 
 # set filter design
 #gss_fir_design = 'firwin' 
@@ -227,12 +227,6 @@ read_in_GSS(working_directory = data_file)
 # use zero-phase filter
 #gss_phase = "zero"
 
-
-""" Settings for Epoching: """
-# set cutoffs (in seconds) for epoching:
-#gss_prestim_cutoff = -1.5 
-#gss_poststim_cutoff = 4 
-
 # I set all those values as default arguments, so can 
 # just pass the wd in the function call, but if you want 
 # to change arguments, just put them in the brackets as well. 
@@ -244,27 +238,21 @@ GSS_filter_epoching(working_directory = data_file)
 #%%
 """ ---- STATS FOR GSS DATA ---- """
 # Input: MNE Epochs object containing filtered + epoched GSS data (Output from 2.2)
-# Output:  
-    
-# check this:    
-gss_psd_tmin = 1
-gss_psd_tmax = 4
+# Output: Results as CSV + new variable 'gss_results_df' (directly returned from function) 
 
-# sampling rate is 45 Hz for the GSS data
-gss_psd_sfreq = 45
+# sampling rate is 80 Hz for the GSS data
+#gss_psd_sfreq = 80
 
 # which frequencies should be included?
 # get "4–12 Hz range since this range is where a majority 
 # of the tremor is contained" (Archer et al., 2018)
-gss_psd_fmin = 4
-gss_psd_fmax = 12
-
-gss_psd_n_overlap = 0 
-gss_psd_n_per_seg = None 
-
-gss_psd_n_jobs = 1 
-gss_psd_average = 'mean' 
-gss_psd_window = 'hamming'
+#gss_psd_fmin = 4
+#gss_psd_fmax = 12
+#gss_psd_n_overlap = 0 
+#gss_psd_n_per_seg = None 
+#gss_psd_n_jobs = 1 
+#gss_psd_average = 'mean' 
+#gss_psd_window = 'hamming'
 
 # gss_psd_n_fft = 256*6 #??? 
 # 256 is default, but only produces values for each 2nd frequency. 
@@ -273,6 +261,11 @@ gss_psd_window = 'hamming'
 # If you set n_fft as == len(samples), you get more values aka more freqs.
 # --> I hardcoded the n_fft in the PSD function call in 
 # the GSS_stats() script as == len(samples)
+
+
+# I set all those values as default arguments, so can 
+# just pass the wd in the function call, but if you want 
+# to change arguments, just put them in the brackets as well. 
 
 GSS_stats(working_directory = data_file)
         
