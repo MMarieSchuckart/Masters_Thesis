@@ -1,4 +1,5 @@
 
+
 """ Stats script for Merle's Master's Thesis
 
 Stats part for GSS data
@@ -51,7 +52,7 @@ def GSS_stats(working_directory,
     import numpy as np
 
     # for dataframes as in R
-    #import pandas as pd
+    import pandas as pd
     
     # Shapiro-Wilk test function
     from scipy.stats import shapiro
@@ -70,9 +71,6 @@ def GSS_stats(working_directory,
     
     # get one way repeated measures ANOVA
     from pingouin import ttest
-    
-    # for getting all possible pairs from list
-    from itertools import combinations
     
     # for plotting
     import matplotlib.pyplot as plt
@@ -298,7 +296,7 @@ def GSS_stats(working_directory,
     """ run Shapiro-Wilk Test """
     # We need to test each group separately.
     # If test is significant, distribution is not Gaussian.
-    # If it's not significant, it couldn't be shown that it's not Gaussion (≠ it's Gaussian).
+    # If it's not significant, it couldn't be shown that it's not Gaussian (≠ it's Gaussian).
     
     # I want to collect my results in a df, so get info on the test, the data we tested and the results:
     gss_results_df = pd.DataFrame(columns = ["test name", "data", "p-values", "test statistics", 
@@ -457,7 +455,9 @@ def GSS_stats(working_directory,
                    paired = True, 
                    alternative = "greater")
        
-       p = float(res["p-val"])
+       # use Bonferroni correction on p-values:
+       p = float(res["p-val"]) * len(pairs)
+       
        stat = float(res["T"])
        df = float(res["dof"])
        eff_size = str(float(res["cohen-d"])) + " (Cohen's d)"
@@ -546,7 +546,7 @@ def GSS_stats(working_directory,
         # Test assumption 5 - Normality of Distribution: 
         """ run Levene Test """
         # run Levene test, get p and test statistic        
-        stat, p = levene(feedback_ao, feedback_av, feedback_vo)
+        stat, p = levene(feedback_ao, feedback_va, feedback_vo)
         
         # add to results df
         gss_results_df.loc[len(gss_results_df)] = ["Levene Test for Homogeneity of Variance", 
@@ -665,7 +665,9 @@ def GSS_stats(working_directory,
                     paired = True, 
                     alternative = alternative[idx])
        
-        p = float(res["p-val"])
+        # use Bonferroni correction on p-value:
+        p = float(res["p-val"]) * len(pairs)
+        
         stat = float(res["T"])
         df = float(res["dof"])
         eff_size = str(float(res["cohen-d"])) + " (Cohen's d)"
@@ -690,7 +692,4 @@ def GSS_stats(working_directory,
     """ return gss_results_df as function output """
     return(gss_results_df)
 
-# END OF FUNCTION             
-
-       
-        
+# END OF FUNCTION     
