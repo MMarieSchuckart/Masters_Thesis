@@ -13,12 +13,13 @@ Output:
 
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
+#%% 
 # create function to filter + epoch data automatically
 def EEG_filter_epoching(working_directory, 
                         eeg_channel_picks, 
                         eog_channels,
-                        eeg_fir_design = 'firwin', 
-                        eeg_window_type = 'hamming', 
+                        eeg_fir_design = "firwin", 
+                        eeg_window_type = "hamming", 
                         eeg_phase = "zero", 
                         eeg_bandpass_fmin = 4, 
                         eeg_bandpass_fmax = 35, 
@@ -64,7 +65,7 @@ def EEG_filter_epoching(working_directory,
     """ 3. get list of all .fif files in my directory """
     # (the asterix in the path means the name of the 
     # file can be anything as long as it has an .xdf ending)
-    file_list = glob.glob(working_directory + "eeg_participant" + "_raw*.fif")
+    file_list = glob.glob(working_directory + "eeg_participant" + "*_raw.fif")
 
     """ 4. keep track of files """
     file = 0
@@ -77,7 +78,7 @@ def EEG_filter_epoching(working_directory,
         # the participant numbers in file list are in the wrong order
         # so get the number from the filename instead of the loop index number
 
-        participant = file_name[-7:-4]
+        participant = file_name[-11:-8]
         
         # if participant number has < 2 or 3 digits, shorten the number
         if participant[0] == "n":
@@ -107,7 +108,9 @@ def EEG_filter_epoching(working_directory,
         ica_filt_raw.load_data().filter(l_freq = 1., h_freq = None)
 
         # set up ICA (variables are defined at the beginning of the script)
-        ica = ICA(n_components = ica_n_components, max_iter = ica_max_iter, random_state = ica_random_state)
+        ica = ICA(n_components = ica_n_components, 
+                  max_iter = ica_max_iter, 
+                  random_state = ica_random_state)
 
         # fit ICA
         ica.fit(ica_filt_raw)
@@ -288,3 +291,4 @@ def EEG_filter_epoching(working_directory,
         
     
 # END FUNCTION
+
