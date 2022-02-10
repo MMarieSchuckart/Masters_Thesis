@@ -1,4 +1,3 @@
-
 """ Stats script for Merle's Master's Thesis
 
 Stats for EEG data
@@ -12,7 +11,7 @@ Version 1: 10.02.2022
 
 #%%
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
-#eeg_coh_sf = 80
+#eeg_coh_sf = 500
 #eeg_coh_window = 'hann' 
 #eeg_coh_detrend = 'constant'
 #eeg_coh_axis = - 1
@@ -24,7 +23,7 @@ Version 1: 10.02.2022
 
 # create function for running EEG stats script
 def EEG_stats_coherences(working_directory, 
-                         eeg_coh_sf = 80, 
+                         eeg_coh_sf = 500, 
                          eeg_coh_window = 'hann', 
                          eeg_coh_detrend = 'constant', 
                          eeg_coh_axis = - 1,
@@ -74,9 +73,6 @@ def EEG_stats_coherences(working_directory,
     # for plotting
     import matplotlib.pyplot as plt
     
-    # for turning nested array into 1D array
-    from itertools import chain
-    
     # create small function to find element in numpy array 
     # that's nearest to a certain value:
     def find_nearest(array, value):
@@ -99,7 +95,7 @@ def EEG_stats_coherences(working_directory,
     # 2.3 create df for coherence values
     coherences_all = pd.DataFrame(columns = ["participant", "epoch", 
                                              "feedback", "sfb", "sfc", 
-                                             "ROI1", "ROI2", "frequency_band", 
+                                             "ROI1 x ROI2", "frequency_band", 
                                              "coherence"])
     
     # 2.4 set ROIs:
@@ -276,12 +272,36 @@ def EEG_stats_coherences(working_directory,
                     # put everything into df
                     coherences_all.loc[len(coherences_all)] = [participant, pick_epoch, 
                                                              feedback, sfb, sfc, 
-                                                             ROI1, ROI2, freq_bands[freq_band_idx], 
+                                                             ROI1 + " x " + ROI2, 
+                                                             freq_bands[freq_band_idx], 
                                                              round(coh_val, 3)]
 
-    # Let's assume everything works and higher sfcs --> higher tremor amplitudes. 
-    # I don't know anything about coherences but I'd assume that the stronger the influence of 
-    # the feedback the higher the communication between the ROIs should be.
-    # Test this? Or just compute average coherences and leave it at that?
+                
+#%%   
+    """ Average over participants: """    
+    coh_avg_participants = coherences_all.groupby(["feedback", "sfc", "ROI1 x ROI2", "frequency_band"])["coherence"].mean()
+    # Average over participants & sfc conditions: 
+    coh_avg_participants_sfc = coherences_all.groupby(["feedback", "ROI1 x ROI2", "frequency_band"])["coherence"].mean()
+    # Average over participants & sfc conditions & feedback conditions: 
+    coh_avg_participants_sfc_feedback = coherences_all.groupby(["ROI1 x ROI2", "frequency_band"])["coherence"].mean()
+    
+    # Using coherences_all you could even test if there are sigificant differences 
+    # between certain conditions concerning functional connectivity between certain ROIs.
+    # But nah. Save results and leave it at that.
+    
+              
+#%%    
 
+    """ save dataframes with results as .csv files """
+    coherences_all.to_csv(path_or_buf = working_directory + "coherences_all.csv")
+    coh_avg_participants.to_csv(path_or_buf = working_directory + "coh_avg_participants.csv")
+    coh_avg_participants_sfc.to_csv(path_or_buf = working_directory + "coh_avg_participants_sfc.csv")
+    coh_avg_participants_sfc_feedback.to_csv(path_or_buf = working_directory + "coh_avg_participants_sfc_feedback.csv")
+    
+    
+    """ Create "I'm done!"-message: """
+    print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I saved the results for \nthe coherence analysis of the EEG data in\nthe working directory.\n\n- - - - - - - - - - - - - - - - - - - - - ")
 
+# END OF FUNCTION      
+# Micdrop - Merle out.    
+       
