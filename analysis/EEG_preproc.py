@@ -20,7 +20,7 @@ def EEG_filter_epoching(working_directory,
                         eeg_fir_design = 'firwin', 
                         eeg_window_type = 'hamming', 
                         eeg_phase = "zero", 
-                        eeg_bandpass_fmin = 5, 
+                        eeg_bandpass_fmin = 4, 
                         eeg_bandpass_fmax = 35, 
                         n_jobs = 1, 
                         eeg_prestim_cutoff = -1.5, 
@@ -288,4 +288,3 @@ def EEG_filter_epoching(working_directory,
         
     
 # END FUNCTION
-
