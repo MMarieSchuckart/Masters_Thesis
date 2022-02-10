@@ -1,13 +1,11 @@
 # :closed_book: Analysis Scripts for Merle's Master's Thesis
-(last updated: February 8th 2022)
+(last updated: February 10th 2022)
 
 This repository is used to collect all the scripts I wrote for my Master's thesis.
 
 &nbsp;  
 
 ## Overview 
-This is work in progress.&nbsp;  🐢
-
 The data that I use to write the scripts right now are from a pilot study with a patient with Parkinson's disease, it's only a single file that ends somewhere in block 1 (so there's quite a bit missing). There are no real datasets yet, so I haven't tested my script yet.
 
 &nbsp;  
