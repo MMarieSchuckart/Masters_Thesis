@@ -60,17 +60,21 @@ The data that I use to write the scripts right now are from a pilot study with a
     * save as .fif file in the working directory you used as the function's argument
 
 
-### [EEG_stats( ... )](EEG_stats): WORK IN PROGRESS
+### [EEG_stats_ttests( ... )](EEG_stats_part1): WORK IN PROGRESS
 * for each participant...
     * read in fif file containing epoched & filtered EEG data
     * for each epoch & channel, compute PSD
     * extract Power value for each epoch, channel & frequency
     * add information on participant, sfb, sfc and feedback condition and save as df
-* for each participant, channel and frequency, compute OLS regression: power ~ feedback + sfc
-    * get betas for feedback & sfc, save in df with information on participant, channel and frequency
-* for each channel & frequency, compute t-test against 0 (1 t-test for feedback, 1 t-test for sfc)
-    * save p- & T-vales in df with information on channel & frequency
+* for each participant, ROI and frequency band, compute OLS regression: power ~ feedback + sfc
+    * get betas for feedback & sfc, save in df with information on participant, ROI and frequency band
+* for each ROI & frequency band, compute 2 1-sample t-tests against 0 (1 t-test for feedback, 1 t-test for sfc)
+    * save p- & T-vales in df with information on ROI & frequency band
     * apply false detection rate correction on the p-values
-* TO DO: plot the p-values
-* TO DO: compute coherences for each ROI & frequency band
+* save betas and t-test results as .sv files in the working directory you used as the function's argument
 
+
+### [EEG_stats_coherences( ... )](EEG_stats_part2): WORK IN PROGRESS
+* for each participant...
+    * read in fif file containing epoched & filtered EEG data
+    * for each epoch, ROI & frequency band, compute coherences
