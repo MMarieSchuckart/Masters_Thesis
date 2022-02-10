@@ -74,7 +74,7 @@ The data that I use to write the scripts right now are from a pilot study with a
 * save betas and t-test results as .sv files in the working directory you used as the function's argument
 
 
-### [EEG_stats_coherences( ... )](EEG_stats_part2): WORK IN PROGRESS
+### [EEG_stats_coherences( ... )](EEG_stats_part2): 
 * for each participant...
     * read in fif file containing epoched & filtered EEG data
     * for each epoch, ROI & frequency band, compute coherences
