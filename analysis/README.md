@@ -71,10 +71,12 @@ The data that I use to write the scripts right now are from a pilot study with a
 * for each ROI & frequency band, compute 2 1-sample t-tests against 0 (1 t-test for feedback, 1 t-test for sfc)
     * save p- & T-vales in df with information on ROI & frequency band
     * apply false detection rate correction on the p-values
-* save betas and t-test results as .sv files in the working directory you used as the function's argument
+* save betas and t-test results as .csv files in the working directory you used as the function's argument
 
 
 ### [EEG_stats_coherences( ... )](EEG_stats_part2): 
 * for each participant...
     * read in fif file containing epoched & filtered EEG data
     * for each epoch, ROI & frequency band, compute coherences
+* get average coherences 
+* save results as .csv files in the working directory you used as the function's argument
