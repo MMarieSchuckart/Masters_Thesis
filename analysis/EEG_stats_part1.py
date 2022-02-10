@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 """ Stats script for Merle's Master's Thesis
 
@@ -305,7 +303,7 @@ def EEG_stats_ttests(working_directory,
     power_vals_all["feedback"] = power_vals_all["feedback"].replace(["vo", "ao", "va"], [0, 1, 2])
 
     # create empty dfs for beta coefficients
-    tmp_df = pd.DataFrame(columns = ["participant", "ROI", "freq_band", "beta_feedback", "beta_sfc"])
+    tmp_df_betas = pd.DataFrame(columns = ["participant", "ROI", "freq_band", "beta_feedback", "beta_sfc"])
     beta_coeffs_res = pd.DataFrame(columns = ["participant", "ROI", "freq_band", "beta_feedback", "beta_sfc"])
 
     # loop participants
@@ -497,9 +495,10 @@ def EEG_stats_ttests(working_directory,
                 # If yes: beta ≠ 0, if no: beta = 0
                 
                 # append beta coefficients for current participant, channel & frequency to df
-                tmp_df.loc[0] = [participant, roi, freq_band, beta_feedback, beta_sfc]
-                beta_coeffs_res = beta_coeffs_res.append(tmp_df) 
-                
+                tmp_df_betas.loc[0] = [participant, roi, freq_band, beta_feedback, beta_sfc]
+                beta_coeffs_res = beta_coeffs_res.append(tmp_df_betas) 
+       
+
             
 #%%                                     
                
@@ -613,6 +612,5 @@ def EEG_stats_ttests(working_directory,
 
     """ Create "I'm done!"-message: """
     print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I saved the results for the\nEEG data (part 1: betas & t-test results) as \n't_test_results.csv' and 'beta_coeffs_results.csv' \nin the working directory.\n\n- - - - - - - - - - - - - - - - - - - - - ")
-
 
 # END FUNCTION
