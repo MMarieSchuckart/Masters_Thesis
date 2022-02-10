@@ -594,33 +594,40 @@ def EEG_stats(working_directory,
              
 
              # save results in df
-             # append beta coefficients for current participant, channel & frequency to df
+             # append results for current channel & frequency to df
              tmp_df.loc[0] = [roi, freq_band, 
                               p_feedback, T_feedback,
                               p_sfc, T_sfc]
-            
+             # append to big df
              t_test_results = t_test_results.append(tmp_df) 
              
 
-             # False Detection Rate (FDR) Correction to correct for multiple comparisons
-             # concerning the method argument: 
-             # indep = Benjamini/Hochberg for independent or positively correlated tests (default)
+    """ False Detection Rate (FDR) Correction to correct for multiple comparisons """
+    # concerning the method argument: 
+    # indep = Benjamini/Hochberg for independent or positively correlated tests (default)
 
-             t_test_results["p_feedback"] = fdr(t_test_results["p_feedback"], 
-                                                alpha = 0.05, 
-                                                method = 'indep', 
-                                                is_sorted = False)[1]
-             t_test_results["p_sfc"] = fdr(t_test_results["p_sfc"], 
-                                           alpha = 0.05, 
-                                           method = 'indep', 
-                                           is_sorted = False)[1]
+    t_test_results["p_feedback"] = fdr(t_test_results["p_feedback"], 
+                                       alpha = 0.05, 
+                                       method = 'indep', 
+                                       is_sorted = False)[1]
+    t_test_results["p_sfc"] = fdr(t_test_results["p_sfc"], 
+                                  alpha = 0.05, 
+                                  method = 'indep', 
+                                  is_sorted = False)[1]
 
-             #save files as csv so I can do mad plotting stuff in R 
-             t_test_results.to_csv(working_directory + "t_test_results.csv", 
-                                   index = False, 
-                                   float_format = '%.16g')
-             beta_coeffs_res.to_csv(working_directory + "beta_coeffs_results.csv", 
-                                    index = False, 
-                                    float_format = '%.16g')
+#%%
+    """ save results files as csv """
+    t_test_results.to_csv(working_directory + "t_test_results.csv", 
+                          index = False, 
+                          float_format = '%.16g')
+    beta_coeffs_res.to_csv(working_directory + "beta_coeffs_results.csv", 
+                           index = False, 
+                           float_format = '%.16g')
+
+#%%
+
+    """ Create "I'm done!"-message: """
+    print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I saved the results for the\nEEG data (part 1: betas & t-test results) as \n't_test_results.csv' and 'beta_coeffs_results.csv' \nin the working directory.\n\n- - - - - - - - - - - - - - - - - - - - - ")
 
 
+# END FUNCTION
