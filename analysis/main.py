@@ -49,15 +49,12 @@ plot_file = "/Users/merle/Desktop/Masterarbeit/Plots/"
 """ ------ get functions from the other scripts ------ """
 
 from EEG_read_xdf import read_in_EEG
+from EEG_preproc import EEG_filter_epoching
+from EEG_stats_part1 import EEG_stats_ttests
+from EEG_stats_part2 import EEG_stats_coherences
 
 from GSS_read_xdf import read_in_GSS
-
-from EEG_preproc import EEG_filter_epoching
-
 from GSS_preproc import GSS_filter_epoching
-
-from EEG_stats import EEG_stats
-
 from GSS_stats import GSS_stats
 
 
@@ -152,6 +149,7 @@ EEG_filter_epoching(working_directory = data_file,
 
 """ Settings for power spectral density (PSD) analysis (using Welch's Method) """ 
 
+""" Part 1: t-tests """
 # settings for cropping the epoch:
 #psd_tmin = 1 
 #psd_tmax = 4
@@ -181,10 +179,19 @@ EEG_filter_epoching(working_directory = data_file,
 # just pass the wd in the function call, but if you want 
 # to change arguments, just put them in the brackets as well. 
 
-""" run stats function """  
-EEG_stats(working_directory = data_file)
+""" run stats function part 1 """  
+EEG_stats_ttests(working_directory = data_file)
 
 # hint: p-values are plotted in an R-Script called "Master_Plots"
+
+
+""" Part 2: coherences """
+
+
+""" run stats function part 2"""  
+EEG_stats_coherences(working_directory = data_file)
+
+
 
 
 
