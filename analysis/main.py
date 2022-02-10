@@ -189,15 +189,42 @@ EEG_stats_ttests(working_directory = data_file)
 
 
 """ run stats function part 2"""  
+# Settings for computing coherences between ROIs in each freq band:
+
+# sampling frequency of the EEG data
+#eeg_coh_sf = 500 
+
+# use von Hann window function in 
+# the coherence computation
+#eeg_coh_window = "hann" 
+
+# detrend data?
+# Idk I think they're already detrended. 
+# I baseline corrected them AND applied 
+# a high-pass-filter (seriously what else do they want)
+#eeg_coh_detrend = "constant"
+
+# Axis along which the coherence is computed for input x and y
+# default: -1 aka over the last axis
+#eeg_coh_axis = - 1
+
+# which part of the epochs do you want to compute coherences for?
+#eeg_coh_tmin = 1, 
+#eeg_coh_tmax = 4
+
+# I set all those values as default arguments, so can 
+# just pass the wd in the function call, but if you want 
+# to change arguments, just put them in the brackets as well. 
+
 EEG_stats_coherences(working_directory = data_file)
 
-
-
-
-
-
-
 #%%
+
+
+
+
+
+
 
 """ ------------ Part 2: GSS DATA ANALYSIS ------------ """
 
