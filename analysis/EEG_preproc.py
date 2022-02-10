@@ -27,7 +27,11 @@ def EEG_filter_epoching(working_directory,
                         eeg_poststim_cutoff = 4, 
                         ica_n_components = 5, 
                         ica_max_iter = "auto", 
-                        ica_random_state = 97):    
+                        ica_random_state = 97,
+                        eeg_epochs_tmin = -1.5,
+                        eeg_epochs_tmax = 7,
+                        eeg_epochs_baseline_start = -1.5,
+                        eeg_epochs_baseline_stop = 0):    
     
     # I set default arguments, but they can be overwritten 
     # if you set different arguments in the function call.
@@ -62,15 +66,11 @@ def EEG_filter_epoching(working_directory,
     # file can be anything as long as it has an .xdf ending)
     file_list = glob.glob(working_directory + "eeg_participant" + "_raw*.fif")
 
-    """ 4. Create empty lists to keep track of plots (before and after filtering)"""
-    #eeg_figs_before_filtering = []
-    #eeg_figs_after_filtering = []
-
-    """ 5. keep track of files """
+    """ 4. keep track of files """
     file = 0
     
  #%%      
-    """ 6. loop fif file names in file_list (aka loop participants): """
+    """ 4. loop fif file names in file_list (aka loop participants): """
     for file_name in file_list:
         
         """ save participant number"""
@@ -86,20 +86,20 @@ def EEG_filter_epoching(working_directory,
             participant = participant[-2:]
         
         
-        """ 6.1 read in fif file """
+        """ 4.1 read in fif file """
         eeg_Raw = mne.io.read_raw_fif(file_name)
 
 #%%  
-        """ 6.2 Preprocessing """
+        """ 4.2 Preprocessing """
         # (variables used here are set in the main script)
     
-        """ 6.2.1 pick the right channels """
+        """ 4.2.1 pick the right channels """
         # Pick EEG channels
         eeg_Raw.pick_channels(eeg_channel_picks)
 
 #%%  
         
-        """ 6.2.2 ICA to get rid of blinks in the EEG data """
+        """ 4.2.2 ICA to get rid of blinks in the EEG data """
         # highpass filter the data 
         # (the quality of the ICA fit is negatively affected by 
         # low-freq drifts, so this is important!)
@@ -124,7 +124,7 @@ def EEG_filter_epoching(working_directory,
         ica.apply(eeg_Raw)
 
  #%%  
-        """ 6.2.3 filter EEG data """
+        """ 4.2.3 filter EEG data """
         # (variables are defined at the beginning of the script))
         eeg_Raw.filter(picks = eeg_channel_picks,
                        l_freq = eeg_bandpass_fmin, 
@@ -135,7 +135,7 @@ def EEG_filter_epoching(working_directory,
                        n_jobs = n_jobs)
 
     #%%       
-        """ 6.2.4 Epoching """    
+        """ 4.2.4 Epoching """    
         # max_force_xxx -> initial maximum grip force of participant
         # block -> Blocks 0 - 3
         # Block 0 = training 
@@ -153,13 +153,14 @@ def EEG_filter_epoching(working_directory,
         #    5. end_trial
         
    #%%        
-        """ Get Triggers & save as Annotations object """
+        """ 4.3 Get Triggers & save as Annotations object """
         
         # get trigger timestamps and trigger descriptions
         trigger_descriptions = eeg_Raw.annotations.description.tolist()
         trigger_timestamps = eeg_Raw.annotations.onset.tolist()    
-    
-        """ get block onsets & crop eeg_Raw to seperate blocks """
+        
+   #%%     
+        """ 4.4 get block onsets & crop eeg_Raw to seperate blocks """
         b0_onset = trigger_timestamps[trigger_descriptions.index("block0")]
         
         # if the trigger block1 is in the list of trigger descriptions, save onset.
@@ -173,14 +174,15 @@ def EEG_filter_epoching(working_directory,
         #save data from block 0 (training)
         #b_test_Raw = eeg_Raw.copy().crop(tmin = b0_onset, tmax = b1_onset)
     
-        # exclude training block and block 3 (or just exclude training, if there is no block 3)
+        """ exclude training block and block 3 """
+        # (or just exclude training, if there is no block 3)
         if "block3" in trigger_descriptions:
             b_main_Raw = eeg_Raw.copy().crop(tmin = b1_onset, tmax = b3_onset)
         else:
             b_main_Raw = eeg_Raw.copy().crop(tmin = b1_onset)
 
  #%%  
-        """ create epochs, only use data from blocks 1 & 2 """
+        """ 4.5 create epochs, only use data from blocks 1 & 2 """
         
         """ create events from annotations """
         # use regular expression to look for strings beginning with t (I only need the trial starts)
@@ -239,11 +241,18 @@ def EEG_filter_epoching(working_directory,
         eeg_epochs_metadata.columns = ["feedback", "sfb", "sfc"]
         
         """ get epochs, apply baseline correction on the fly """
-        # event = trial start, cut from -1.5 to +7           
-        trial_epochs = mne.Epochs(b_main_Raw, trial_events, trial_event_id, 
-                                  tmin = - 1.5, tmax = 7, baseline = (-1.5, 0), 
-                                  preload = True, event_repeated = "drop",
-                                  reject_by_annotation = False, metadata = eeg_epochs_metadata) # metadata = pass
+        # event = trial start, cut from -1.5 to +7 
+        # with baseline form -1.5 - 0           
+        trial_epochs = mne.Epochs(b_main_Raw, 
+                                  trial_events, 
+                                  trial_event_id, 
+                                  tmin = eeg_epochs_tmin, 
+                                  tmax = eeg_epochs_tmax, 
+                                  baseline = (eeg_epochs_baseline_start, eeg_epochs_baseline_stop), 
+                                  preload = True, 
+                                  event_repeated = "drop",
+                                  reject_by_annotation = False, 
+                                  metadata = eeg_epochs_metadata) # metadata = pass
         
         # plot the epochs (only plot the first 2 or else it gets super messy)
         #trial_epochs.plot(show_scrollbars = True, n_epochs = 2)
@@ -256,7 +265,7 @@ def EEG_filter_epoching(working_directory,
         # https://mne.tools/dev/auto_tutorials/epochs/30_epochs_metadata.html
 
 #%%   
-        """ 7. save Raw object & epoched data for each participant in the file """
+        """ 5. save Raw object & epoched data for each participant in the file """
         # I set as the working directory at the beginning of the script
         trial_epochs.save(fname = "eeg_participant" + str(participant) + "_epo.fif", fmt = 'single', overwrite = False)
     
