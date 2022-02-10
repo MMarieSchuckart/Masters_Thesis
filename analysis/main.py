@@ -1,5 +1,5 @@
 """ Main Script for Merle's Master's Thesis """
-# Scripts by Merle Schuckart, written Sept. - Dec. 2021 
+# Scripts by Merle Schuckart, written Sept. 2021 - Feb. 2022 
 # Github: MMarieSchuckart
 # Email: merle.schuckart@gmx.de
 
