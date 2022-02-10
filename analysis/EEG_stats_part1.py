@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """ Stats script for Merle's Master's Thesis
 
-Stats part for EEG data
+Stats for EEG data
+Part 1: compute betas and t-tests 
 
 Part of Merle's Master Thesis
 Version 1: 14.01.2022
@@ -31,17 +29,17 @@ working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 #%%
 
 # create function for running EEG stats script
-def EEG_stats(working_directory, 
-              psd_tmin = 1, 
-              psd_tmax = 4, 
-              psd_sfreq = 500, 
-              psd_fmin = 4, 
-              psd_fmax = 36, 
-              psd_n_overlap = 0, 
-              psd_n_per_seg = None, 
-              psd_n_jobs = 1, 
-              psd_average = 'mean', 
-              psd_window = 'hamming'):
+def EEG_stats_ttests(working_directory, 
+                     psd_tmin = 1, 
+                     psd_tmax = 4, 
+                     psd_sfreq = 500, 
+                     psd_fmin = 4, 
+                     psd_fmax = 36, 
+                     psd_n_overlap = 0, 
+                     psd_n_per_seg = None, 
+                     psd_n_jobs = 1, 
+                     psd_average = 'mean', 
+                     psd_window = 'hamming'):
     
     # I set default arguments, but they can be overwritten 
     # if you set different arguments in the function call.
