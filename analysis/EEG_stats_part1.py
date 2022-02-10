@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 """ Stats script for Merle's Master's Thesis
 
 Stats for EEG data
@@ -11,20 +14,7 @@ Version 1: 14.01.2022
 
 #%%
 
-""" 1.2 Settings for power spectral density (PSD) analysis using Welch's Method """ 
-
-psd_tmin = 1 
-psd_tmax = 4
-psd_sfreq = 500
-psd_fmin = 4
-psd_fmax = 36 
-psd_n_overlap = 0 
-psd_n_per_seg = None 
-psd_n_jobs = 1
-psd_average = 'mean'
-psd_window = 'hamming'
-
-working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
 #%%
 
@@ -101,10 +91,7 @@ def EEG_stats_ttests(working_directory,
     from scipy.stats import rankdata
 
     # Shapiro-Wilk test function
-    from scipy.stats import shapiro
-
-    # Levene test function
-    from scipy.stats import levene     
+    from scipy.stats import shapiro    
 
     # for getting all possible pairs of elements from 2 lists
     from itertools import product    
