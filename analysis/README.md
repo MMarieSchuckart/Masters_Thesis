@@ -60,7 +60,7 @@ The data that I use to write the scripts right now are from a pilot study with a
     * save as .fif file in the working directory you used as the function's argument
 
 
-### [EEG_stats_ttests( ... )](EEG_stats_part1): WORK IN PROGRESS
+### [EEG_stats_ttests( ... )](EEG_stats_part1):
 * for each participant...
     * read in fif file containing epoched & filtered EEG data
     * for each epoch & channel, compute PSD
