@@ -400,16 +400,8 @@ def GSS_stats(working_directory,
     # If assumptions are violated, rank transform data before using ANOVA & t-tests.
     if (any(p <= 0.05 for p in p_values) or run_parametrical_tests == False):    
         # if you have ties (aka >= 2x the same value), assign average rank
-        rank_sfc_2 = rankdata(sfc_2, method='average').tolist()
-        rank_sfc_25 = rankdata(sfc_25, method='average').tolist()
-        rank_sfc_3 = rankdata(sfc_3, method='average').tolist()
-
-        # mutate original pandas df:
-        # sort by sfc
-        sfc_aggregated = sfc_aggregated.sort_values(by=['sfc'])
-        # put rank transformed data into sfc column
-        sfc_aggregated["power"] = rank_sfc_2 + rank_sfc_25 + rank_sfc_3
-
+        sfc_aggregated["power"] = rankdata(sfc_aggregated["power"], method='average').tolist()
+    
            
 #%% 
     """ Repeated Measures ANOVA (for 3 dependent groups) """
@@ -596,27 +588,29 @@ def GSS_stats(working_directory,
     # If assumptions are violated, rank transform data before using ANOVA & t-tests.
     if (any(p <= 0.05 for p in p_values) or run_parametrical_tests == False):    
         # if you have ties (aka >= 2x the same value), assign average rank
-        rank_feedback_ao = rankdata(feedback_ao, method='average').tolist()
-        rank_feedback_va = rankdata(feedback_va, method='average').tolist()
-        rank_feedback_vo = rankdata(feedback_vo, method='average').tolist()
-
-        # mutate original pandas df:
-        # sort by feedback
-        feedback_aggregated = feedback_aggregated.sort_values(by=['feedback'])
-        # put rank transformed data into sfc column
-        feedback_aggregated["power"] = rank_feedback_ao + rank_feedback_va + rank_feedback_vo
-
-           
+        feedback_aggregated["power"] = rankdata(feedback_aggregated["power"], method='average').tolist()
+    
 #%% 
     """ Repeated Measures ANOVA (for 3 dependent groups) """
+    
     feedback_anova_res = rm_anova(data =  feedback_aggregated, 
-                             dv = "power", 
-                             within = "feedback", 
-                             subject = "ID",
-                             correction = True,
-                             effsize = "np2")         
+                                  dv = "power", 
+                                  within = "feedback", 
+                                  subject = "ID",
+                                  correction = True,
+                                  effsize = "np2")         
     
     # save results
+    
+    # if you don't have enough data / the data in all groups 
+    # has range = 0 because you copy & pasted one test df like me
+    # the ANOVA won't give you an F value. So it that's the case, 
+    # save None instead
+    try:
+        stat = float(feedback_anova_res["F"])
+    except KeyError:
+        stat = None
+
     stat = float(feedback_anova_res["F"])
     df1 = float(feedback_anova_res["ddof1"])
     df2 = float(feedback_anova_res["ddof2"])
@@ -692,4 +686,6 @@ def GSS_stats(working_directory,
     """ return gss_results_df as function output """
     return(gss_results_df)
 
-# END OF FUNCTION     
+# END OF FUNCTION             
+
+       
