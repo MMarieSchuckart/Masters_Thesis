@@ -12,12 +12,15 @@ Output: .fif file containing EEG data + triggers for each participant
 #%% 
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
+#%%
 
 # create function to read in data automatically
 def read_in_EEG(working_directory):
 
 
-    """ 1. load packages """
+    """ 1. Settings """
+    
+    """ load packages """
     
     # pyxdf for reading in xdf data:
     import pyxdf
@@ -68,7 +71,7 @@ def read_in_EEG(working_directory):
     """ 6. loop xdf file names in file_list (aka loop participants): """
     for file_name in file_list:
         
-        """ save participant number"""
+        # save participant number
         participant += 1
         
         """ 6.1 read in XDF data """
@@ -88,7 +91,7 @@ def read_in_EEG(working_directory):
         
   #%%       
         
-        """ Find out which stream contains which kind of data """
+        """ 6.2.1 Find out which stream contains which kind of data """
         # The streams might be in a different order in each file, so find out 
         # where the GSS data are and which stream contains the triggers
             
@@ -124,7 +127,7 @@ def read_in_EEG(working_directory):
                   
   #%% 
 
-        """ 6.2.1 Create info for Raw Object for EEG data"""
+        """ 6.2.2 Create info for Raw Object for EEG data"""
         # Sampling rate: 500 Hz
         sampling_freq = float(streams[eeg_idx]["info"]["nominal_srate"][0]) # in Hertz
         
@@ -147,7 +150,7 @@ def read_in_EEG(working_directory):
                 
   #%%     
     
-        """ 6.2.2 Get EEG data for Raw object""" 
+        """ 6.2.3 Get EEG data for Raw object""" 
         # structure should be: 
             # rows: channels
             # columns: sample points
@@ -161,12 +164,12 @@ def read_in_EEG(working_directory):
         data_eeg[:] *= 1e-6
         
             
-        """ 6.2.3 Create Raw object for EEG data""" 
+        """ 6.2.4 Create Raw object for EEG data""" 
         # combine info & eeg data
         eeg_Raw = mne.io.RawArray(data_eeg, info_eeg)
     
     
-        """ 6.2.4 change the 3 EEG channels in the face to EOG channel type """
+        """ 6.2.5 change the 3 EEG channels in the face to EOG channel type """
         # check channel types before converting them to eog:
         #eeg_Raw.get_channel_types("EEG_020")
         # convert channel type of the 3 electrodes in question to eog
@@ -322,7 +325,4 @@ def read_in_EEG(working_directory):
 
 # run function
 # read_in_EEG(working_directory)
-
-
-
 
