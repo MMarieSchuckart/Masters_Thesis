@@ -7,6 +7,8 @@
 # for Merle's Thesis or just run parts of it.
 
 
+#%%
+
 """ 1. Before using this script...
 
 Please make sure the packages MNE, pyxdf, emd, pingouin and hampel 
