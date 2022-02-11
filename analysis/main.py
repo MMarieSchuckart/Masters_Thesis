@@ -1,5 +1,5 @@
 """ Main Script for Merle's Master's Thesis """
-# Scripts by Merle Schuckart, written Sept. 2021 - Feb. 2022 
+# Scripts by Merle Schuckart, written Sept. - Dec. 2021 
 # Github: MMarieSchuckart
 # Email: merle.schuckart@gmx.de
 
@@ -109,7 +109,7 @@ eog_channels = ["EEG_031", "EEG_021",
 # zero phase filter
 #eeg_phase = "zero"
 # highpass filter 
-#eeg_bandpass_fmin = 5
+#eeg_bandpass_fmin = 4
 # lowpass filter 
 #eeg_bandpass_fmax = 35,
 # set number of runs to run in parallel
@@ -212,17 +212,29 @@ EEG_stats_ttests(working_directory = data_file)
 #eeg_coh_tmin = 1, 
 #eeg_coh_tmax = 4
 
-# I set all those values as default arguments, so can 
-# just pass the wd in the function call, but if you want 
+# set ROIs
+#auditory_ROI = ["EEG_001", "EEG_069", 
+#                "EEG_068","EEG_033"
+#                "EEG_038","EEG_066", 
+#                "EEG_065"]
+
+#motor_ROI = ["EEG_034", "EEG_002", 
+#             "EEG_071", "EEG_077", 
+#             "EEG_005", "EEG_035", 
+#             "EEG_078"]
+
+#visual_ROI = ["EEG_108", "EEG_054", 
+#              "EEG_055", "EEG_061", 
+#              "EEG_117", "EEG_118", 
+#              "EEG_109", "EEG_063"]
+
+# I set all those values as default arguments (the ROIs, too), 
+# so you can just pass the wd in the function call, but if you want 
 # to change arguments, just put them in the brackets as well. 
 
 EEG_stats_coherences(working_directory = data_file)
 
 #%%
-
-
-
-
 
 
 
