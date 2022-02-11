@@ -78,3 +78,7 @@ The data that I use to write the scripts right now are from a pilot study with a
     * for each epoch, ROI & frequency band, compute coherences
 * get average coherences 
 * save results as .csv files in the working directory you used as the function's argument
+
+-------------------------------------------------------------
+### [TESTDATA_gss_read_xdf( ... )](TESTDATA_gss_read_xdf)
+This script is not a function, it's just a "normal" script for reading in test data from a pilot study (???) by Julius, where you only have GSS and eyetracking data, but no EEG channel. You can use the script to read them in (they have a slightly different shape than the other datasets) and then you can use the .fif files you get for testing the preproc and stats GSS scripts. Thought this would be a neat bonus for testing at least half of my scripts with real data. :-) 
