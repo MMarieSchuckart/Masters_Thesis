@@ -1,5 +1,4 @@
 
-
 """ Stats script for Merle's Master's Thesis
 
 Stats part for GSS data
@@ -9,10 +8,11 @@ Version 1: 13.01.2022
 
 """
 
-
 #%%
 
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+
+#%%
 
 # create function for running EEG stats script
 def GSS_stats(working_directory, 
@@ -28,9 +28,9 @@ def GSS_stats(working_directory,
     # I set default arguments, but they can be overwritten 
     # if you set different arguments in the function call.
 
-    """ settings """
+    """ 1. Settings """
 
-    """ 1.1 load packages """
+    """ load packages """
 
     # os for setting working directory
     import os
@@ -85,11 +85,24 @@ def GSS_stats(working_directory,
     # 2.2 get list of all files in the directory that end with "_filtered_epo.fif"
     file_list = glob.glob(working_directory + "gss_" + "*_filtered_epo.fif")
         
+    # 2.3 check if there are data from enough subjects to run the tests
+    # (you need at least 3 values in each group for most tests to work and 
+    # more if you want meaningful results)
+    if len(file_list) < 4:
+        # print warning if there are not enough participants to run tests
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nWARNING! \n\nYou have data of less than 4 participants. \nYou can't run some statistical tests with this! \n\nRunning this function was stopped. \n\n- - - - - - - - - - - - - - - - - - - - - ")
+        # stop the further execution of this function
+        return
+    elif len(file_list) >= 4 and len(file_list) < 10:
+        # print warning if there are not enough participants to run tests
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nWARNING! \n\nYou have data of less than 10 participants! \nYou can run statistical tests with this \nbut be careful with the interpretation of the results! \n\n- - - - - - - - - - - - - - - - - - - - - ")
+
+#%%
+    # If everything is fine, go on:
     # create empty df for the results of the PSDs of all participants
     gss_PSDs_all = pd.DataFrame(columns = ['block', 'sfb', 'sfc', 'feedback', 'epoch', 'power', 'frequency', 'ID'])
 
-   #%%  
-    """ 6. loop fif file names in file_list (aka loop participants): """
+    """ 3. loop particiants: """
     for file_idx in range(0, len(file_list)):
         
         """ save participant number"""
@@ -112,15 +125,17 @@ def GSS_stats(working_directory,
 
          
 #%%
-
-        """ loop epochs """
+        """ 3. Get PSDs for each participant at each epoch """
+        # Hint: We don't loop channels here because we only have one ;-)
+        
+        """ 3.1 Loop epochs """
         # placeholders for getting power peak and corresponding frequency
         power = []
         freq = []
         
         for pick_epoch in range(0, epochs.__len__()):   
             
-            # get current epoch 
+            """ 3.1.1 get current epoch """ 
             single_epoch = epochs[pick_epoch]
             
             # check if the participant started pressing the sensor before trial onset + 1 sec
@@ -135,8 +150,10 @@ def GSS_stats(working_directory,
             # there are 0s afterwards. The reason is I can't know what happened there so 
             # if there are 0s afterwards, maybe the person willingly decided not to use the sensor.
             
+            """ 3.1.2 get data from epoch, exclude epoch if there's at least 1 sec missing """
             # get data from epoch as list
             epoch_data = list(single_epoch.get_data().flatten())
+            
             
             # if there is at least 1 Zero at the beginning of the recording, 
             # count how many there are and go to next epoch (aka exclude current epoch) 
@@ -171,7 +188,7 @@ def GSS_stats(working_directory,
                 power.append(None)
                 freq.append(None)
                 
-            # if everything's fine, compute PSD for current epoch and save results
+            """ 3.1.3 if everything's fine, compute PSD for current epoch and save results """
             else:
             
                 # Settings:
@@ -192,7 +209,7 @@ def GSS_stats(working_directory,
                 #single_epoch.plot_psd(fmin = 4, fmax = 12, spatial_colors = True)
                  
                 
-                """compute power spectral density (PSD) analysis using Welch's Method """
+                """ 3.1.3.1 compute power spectral density (PSD) analysis using Welch's Method """
                 
                 # the following function returns... 
                 # ...the PSD values for each channel (--> saved in object "psds")... 
@@ -213,13 +230,13 @@ def GSS_stats(working_directory,
                                                                  average = gss_psd_average, 
                                                                  window = gss_psd_window)
                 
-                # round frequencies
+                #  round frequencies
                 freqs = np.round(freqs, 1)
     
                 # turn psds array into list
                 psds = psds.tolist()
     
-                # get highest power value and corresponding frequency
+                """ 3.1.3.2 get highest power value and corresponding frequency """
                 peak_power = max(psds)
                 peak_freq = freqs[psds.index(max(psds))]
     
@@ -230,6 +247,7 @@ def GSS_stats(working_directory,
                      
         # END loop epochs
         
+        """ 3.1.4 put frequency and power values into df gss_PSDs_all """
         # append freq and power to gss_epochs_conditions
         gss_epochs_conditions["power"] = power
         gss_epochs_conditions["frequency"] = freq
@@ -244,7 +262,7 @@ def GSS_stats(working_directory,
           
 #%%
    
-    """ Compute pairwise comparisons """
+    """ 4. Compute pairwise comparisons """
     
     # 1st Hypothesis: Higher scaling of Feedback (sfc) should lead to higher tremor amplitudes, regardless of modality:
     #                 Power in sfc: 20% < 25% < 30%
@@ -255,9 +273,9 @@ def GSS_stats(working_directory,
     
          
 #%%
-    """ TEST 1ST HYPOTHESIS  --> SFC """
+    """ 4.1 TEST 1ST HYPOTHESIS  --> SFC """
     
-    """ Aggregate dataframe """
+    """ 4.1.1 Aggregate dataframe """
     # I need 1 value for each participant in each sfc condition
     # --> aggregate dataframe
     
@@ -269,7 +287,7 @@ def GSS_stats(working_directory,
     sfc_aggregated.reset_index(level = 0, inplace = True)
       
 #%%
-    """ Test Assumptions of t-Tests / ANOVAs to see if we can run parametrical tests """
+    """ 4.1.2 Test Assumptions of t-Tests / ANOVAs to see if we can run parametrical tests """
     
     # Assumptions of t-Tests:
     # 1. continuous or ordinal scale of scale of measurement --> given in our case
@@ -293,7 +311,7 @@ def GSS_stats(working_directory,
          
 #%%
     # Test assumption 3 - Normality of Distribution: 
-    """ run Shapiro-Wilk Test """
+    """ 4.1.2.1 run Shapiro-Wilk Test """
     # We need to test each group separately.
     # If test is significant, distribution is not Gaussian.
     # If it's not significant, it couldn't be shown that it's not Gaussian (≠ it's Gaussian).
@@ -310,6 +328,7 @@ def GSS_stats(working_directory,
     p_values = []
     Test_statistics = []
     data = []
+    
     # loop sfc values, test distribution and save test results
     for sfc_val in sfc_values :
         # run shapiro wilk test
@@ -327,7 +346,7 @@ def GSS_stats(working_directory,
     gss_results_df["df"] = pd.Series(df)
              
 #%%
-    """ If Normality of Distribution is given..."""
+    """ 4.1.2.2 If Normality of Distribution is given, run Levene test"""
     # If none of the p-values are significant, this could mean that all 
     # distributions are Gaussian, so assumption #3 would be given.
 
@@ -351,7 +370,7 @@ def GSS_stats(working_directory,
     if all(p > 0.05 for p in p_values):
         
         # Test assumption 5 - Normality of Distribution: 
-        """ run Levene Test """
+        """ Levene Test """
         # run Levene test, get p and test statistic        
         stat, p = levene(sfc_2, sfc_25, sfc_3)
         
@@ -361,9 +380,11 @@ def GSS_stats(working_directory,
                                                    p, stat, None,
                                                    None, None, None]
         
-        # If the Levene test was not significant, this means the variances of the groups 
-        # were more or less equal. If this is the case, 
-        # go on with testing the last assumtion (aka the ANOVA assumption): Sphericity  
+        """ 4.1.2.3 If the Levene test was not significant, run Mauchly's test """ 
+        # If the Levene test was not significant, this means the 
+        # variances of the groups were more or less equal. 
+        # If this is the case, go on with testing the 
+        # last assumtion (aka the ANOVA assumption): Sphericity  
         if p > 0.05:
              run_parametrical_tests = True
 
@@ -387,7 +408,7 @@ def GSS_stats(working_directory,
         
             
 #%% 
-    """ If assumptions are violated, rank-transform data """
+    """ 4.1.3 If assumptions are violated, rank-transform data """
     
     # If not all of the p-values from the Shapiro-Wilk tests 
     # are > 0.05, at least one of the groups is not 
@@ -404,7 +425,7 @@ def GSS_stats(working_directory,
     
            
 #%% 
-    """ Repeated Measures ANOVA (for 3 dependent groups) """
+    """ 4.1.4 Run repeated measures ANOVA (for 3 dependent groups) """
     sfc_anova_res = rm_anova(data =  sfc_aggregated, 
                              dv = "power", 
                              within = "sfc", 
@@ -433,7 +454,7 @@ def GSS_stats(working_directory,
                                                eff_size, None, None]
               
 #%%            
-    # if ANOVA is significant, run t-tests
+    """ 4.1.5 if ANOVA is significant, run t-tests """
 
     # I assume more feedback (aka higher sfc) --> higher tremor amplitudes
     # --> this is what I'll test in the t-test: 
@@ -465,9 +486,9 @@ def GSS_stats(working_directory,
     
 #%%    
     
-    """ TEST 2ND HYPOTHESIS --> FEEDBACK """
+    """ 4.2 TEST 2ND HYPOTHESIS --> FEEDBACK """
     
-    """ Aggregate dataframe """
+    """ 4.2.1 Aggregate dataframe """
     # I need 1 value for each participant in each feedback condition
     # --> aggregate dataframe
     
@@ -483,7 +504,7 @@ def GSS_stats(working_directory,
 #%%   
     
     # Test assumption 3 - Normality of Distribution: 
-    """ run Shapiro-Wilk Test """
+    """ 4.2.2 run Shapiro-Wilk Test """
     # We need to test each group separately.
     # If test is significant, distribution is not Gaussian.
     # If it's not significant, it couldn't be shown that it's not Gaussion (≠ it's Gaussian).
@@ -511,7 +532,7 @@ def GSS_stats(working_directory,
     
              
 #%%
-    """ If Normality of Distribution is given..."""
+    """ 4.2.3 If Normality of Distribution is given, run Levene test """
     # If none of the p-values for the Shapiro-Wilk tests for 
     # the feedback conditions are significant, this could mean 
     # that all distributions are Gaussian, so assumption #3 would be given.
@@ -546,9 +567,11 @@ def GSS_stats(working_directory,
                                                    p, stat, None,
                                                    None, None, None]
         
-        # If the Levene test was not significant, this means the variances of the groups 
-        # were more or less equal. If this is the case, 
-        # go on with testing the last assumtion (aka the ANOVA assumption): Sphericity  
+        """ 4.2.3 If the Levene test was not significant, run Mauchly’s Test """
+        # If the Levene test was not significant, this means the 
+        # variances of the groups were more or less equal. 
+        # If this is the case, go on with testing the last 
+        # assumtion (aka the ANOVA assumption): Sphericity  
         if p > 0.05:
              run_parametrical_tests = True
 
@@ -575,7 +598,7 @@ def GSS_stats(working_directory,
         
             
 #%% 
-    """ If assumptions are violated, rank-transform data """
+    """ 4.2.4 If assumptions are violated, rank-transform data """
     
     # If not all of the p-values from the Shapiro-Wilk tests 
     # are > 0.05, at least one of the groups is not 
@@ -591,7 +614,7 @@ def GSS_stats(working_directory,
         feedback_aggregated["power"] = rankdata(feedback_aggregated["power"], method='average').tolist()
     
 #%% 
-    """ Repeated Measures ANOVA (for 3 dependent groups) """
+    """ 4.2.5 Repeated Measures ANOVA (for 3 dependent groups) """
     
     feedback_anova_res = rm_anova(data =  feedback_aggregated, 
                                   dv = "power", 
@@ -631,7 +654,7 @@ def GSS_stats(working_directory,
                                                eff_size, None, None]
               
 #%%            
-    # if ANOVA is significant, run t-tests
+    """ 4.2.6 if ANOVA is significant, run t-tests """
 
     # 1. I assume ao should evoke at least the same tremor intensity as vo, 
     #    so I have to "test" the H0 I guess 
@@ -677,15 +700,20 @@ def GSS_stats(working_directory,
           
 #%%    
 
-    """ save dataframe with results as .csv """
+    """ 5. save dataframe with results as .csv """
     gss_results_df.to_csv(path_or_buf = working_directory + "gss_test_results.csv")
 
-    """ Create "I'm done!"-message: """
+          
+#%% 
+
+    """ 6. Create "I'm done!"-message: """
     print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I saved the results for the\ngss data as 'gss_test_results.csv' in\nthe working directory. I also returned it\nas a new variable called 'gss_results_df'!\n\n- - - - - - - - - - - - - - - - - - - - - ")
 
-    """ return gss_results_df as function output """
+          
+#%% 
+
+    """ 7. return gss_results_df as function output """
     return(gss_results_df)
 
-# END OF FUNCTION             
 
-       
+# END OF FUNCTION             
