@@ -1,4 +1,5 @@
 
+
 """ Stats script for Merle's Master's Thesis
 
 Stats for EEG data
@@ -103,17 +104,31 @@ def EEG_stats_ttests(working_directory,
     
     # 2.2 get list of all files in the directory that start with "eeg" and end with "epo.fif"
     file_list = glob.glob(working_directory + "eeg*epo.fif")
-    
-    # 2.3 create df for power values
-    power_vals_all = pd.DataFrame(columns = ["participant", "epoch", "feedback", "sfb", "sfc", "channel", "frequency", "power_value"])
-    tmp_df = pd.DataFrame(columns = ["participant", "epoch", "feedback", "sfb", "sfc", "channel", "frequency", "power_value"])
-    
  
+    # check if there are data from enough subjects to run the tests
+    # (you need at least 3 values in each group for most tests to work and 
+    # more if you want meaningful results)
+    if len(file_list) < 4:
+        # print warning if there are not enough participants to run tests
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nWARNING! \n\nYou have data of less than 4 participants. \nYou can't run some statistical tests with this! \n\nRunning this function was stopped. \n\n- - - - - - - - - - - - - - - - - - - - - ")
+        # stop the further execution of this function
+        return
+    
+    elif len(file_list) >= 4 and len(file_list) < 10:
+        # print warning if there are not enough participants to run tests
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nWARNING! \n\nYou have data of less than 10 participants! \nYou can run statistical tests with this \nbut be careful with the interpretation of the results! \n\n- - - - - - - - - - - - - - - - - - - - - ")
+
+    # If everything's fine, go on!
+    
 #%%   
     
     """ 3. Stats Loop Nr 1: 
         compute PSD for each participant, extract Power at each frequency & each channel """
     
+    # create df for power values
+    power_vals_all = pd.DataFrame(columns = ["participant", "epoch", "feedback", "sfb", "sfc", "channel", "frequency", "power_value"])
+    tmp_df = pd.DataFrame(columns = ["participant", "epoch", "feedback", "sfb", "sfc", "channel", "frequency", "power_value"])
+        
     
     """ 3.1  Loop participants"""
     for filename in file_list:
@@ -135,7 +150,7 @@ def EEG_stats_ttests(working_directory,
         
         # 3.4.2 get power spectrum for each electrode & each epoch, then extract power at each freq
         
-        """ loop epochs """
+        """ 3.2 Loop epochs """
         for pick_epoch in range(0, epochs.__len__()):
                     
             # get single epoch, crop to get time interval from second 1 - second 4 
@@ -160,7 +175,7 @@ def EEG_stats_ttests(working_directory,
             # plot psd (no clue which Method this is, the MNE docs don't want me to know this)
             #single_epoch.plot_psd(fmin = 5, fmax = 35)
             
-            """ Loop channels """
+            """ 3.3 Loop channels """
             for channel in range(0, len(channels)):    
                 # get data for the current channel
                 channel_epoched_data = single_epoch._data[0][channel]
@@ -168,7 +183,7 @@ def EEG_stats_ttests(working_directory,
                 # save channel name in df
                 channel_nr = single_epoch.ch_names[channel]
                 
-                """compute power spectral density (PSD) analysis using Welch's Method """
+                """ compute power spectral density (PSD) analysis using Welch's Method """
                 # the following function returns... 
                 # ...the PSD values for each channel (--> saved in object "psds")... 
                 # ...for all frequencies (--> saved in object "freqs")... 
@@ -186,7 +201,7 @@ def EEG_stats_ttests(working_directory,
                 # round frequencies
                 freqs = np.round(freqs, 1)
     
-                """ loop frequencies """
+                """ 3.4 Loop frequencies """
                 for freq_val in range(0,len(freqs)-1):
     
                     # if freq value is an integer...
@@ -212,7 +227,7 @@ def EEG_stats_ttests(working_directory,
 
 #%%
 
-    """ Create new columns: ROI & Frequency Band """
+    """ 4. Create new columns: ROI & Frequency Band """
     
     # currently, the index is 0 in every row, 
     # so make a neat new index column instead:
@@ -266,7 +281,7 @@ def EEG_stats_ttests(working_directory,
 
 #%%
         
-    """ Stats: Compute linear regression & t-Tests """
+    """ 5. Stats: Compute linear regression & t-Tests """
     
     """ Test Assumptions of t-Tests / ANOVAs """
         
@@ -289,7 +304,7 @@ def EEG_stats_ttests(working_directory,
 
 #%%
 
-    """ 5. Stats Loop Nr 2: Loop participants, channels & frequencies
+    """ 5.1 Stats Loop Nr 2: Loop participants, channels & frequencies
     --> compute beta coefficients """
         
     # recode data
@@ -306,23 +321,23 @@ def EEG_stats_ttests(working_directory,
     tmp_df_betas = pd.DataFrame(columns = ["participant", "ROI", "freq_band", "beta_feedback", "beta_sfc"])
     beta_coeffs_res = pd.DataFrame(columns = ["participant", "ROI", "freq_band", "beta_feedback", "beta_sfc"])
 
-    # loop participants
+    """ 5.1.1 Loop participants """
     for participant in np.unique(power_vals_all["participant"]):
 
         # only get data of the current participant
         df_participant = power_vals_all[power_vals_all["participant"] == participant]
         
-        # loop ROIs:
+        """ 5.1.2 loop ROIs: """
         for roi in np.unique(df_participant["ROI"]): 
             # get subset of df with data for the current channel
             df_roi = df_participant[df_participant["ROI"] == roi]
         
-            # loop frequency bands:
+            """ 5.1.3 loop frequency bands: """
             for freq_band in np.unique(df_roi["freq_band"]): 
                 # get subset of df with data for the current frequency
                 df_freq_band = df_roi[df_roi["freq_band"] == freq_band]
                     
-                """ Regression Model: power ~ feedback + sfc """
+                """ 5.1.4 Regression Model: power ~ feedback + sfc """
                 # Hint for Future-Merle: if you use OLS(), you need to add a constant/intercept, 
                 # if you use ols() like I did here, it's added automatically by default.
                 
@@ -332,7 +347,7 @@ def EEG_stats_ttests(working_directory,
                 
                 
                 
-                """ check assumptions of linear regression """
+                """ 5.1.5 check assumptions of linear regression """
                 # Assumptions of OLS regressions:
                 # 1. Linearity of data
                 # 2. all groups have a normal distribution
@@ -349,7 +364,7 @@ def EEG_stats_ttests(working_directory,
                 
                                 
                 
-                """ Assumption 1: Linearity of data """
+                """ 5.1.5.1 Assumption 1: Linearity of data """
                 # You can only check this by visual inspection
                 # uncomment this section if you want to plot everything:
                     
@@ -380,7 +395,7 @@ def EEG_stats_ttests(working_directory,
                 # Ah yes, this looks super weird. Nice.
                 
 
-                """ Assumption 2: the groups follow a normal distribution """
+                """ 5.1.5.2 Assumption 2: the groups follow a normal distribution """
                 # We need to test each group separately.
                 # If test is significant, distribution is not Gaussian - rank transform data 
                 # before computing tests
@@ -419,7 +434,7 @@ def EEG_stats_ttests(working_directory,
                           "\nAssumtion of normally distributed data \nin all groups is violated!\n\n")
                 
                 
-                """ Assumption 3: Mean of Residuals = 0 """
+                """ 5.1.5.3 Assumption 3: Mean of Residuals = 0 """
                 # Get mean of residuals. This can be an insanely small number, 
                 # so I thought I round to 3 digits after the point and then I compare 
                 # it to 0. I hope that's not cheating.
@@ -432,7 +447,7 @@ def EEG_stats_ttests(working_directory,
                           ", so assumtion that mean of residuals = 0 is violated!\n\n")
                 
 
-                """ Assumption 4: little to no multicollinearity of residuals """
+                """ 5.1.5.4 Assumption 4: little to no multicollinearity of residuals """
                 # The features should be linearly independent aka we should not be 
                 # able to use a linear model to accurately predict 
                 # one feature using another one.
@@ -455,7 +470,7 @@ def EEG_stats_ttests(working_directory,
                           "\nAssumtion of no multicollinearity in the data is violated!\n\n")
                     
                     
-                """ Assumption 5: little to no autocorrelation of residuals """
+                """ 5.1.5.5 Assumption 5: little to no autocorrelation of residuals """
                 # --> Durbin Watson Test
                 # If test statistic of Durbin Watson Test is outside a range 
                 # of 1.5 - 2.5, you have autocorrelation in your data 
@@ -468,7 +483,7 @@ def EEG_stats_ttests(working_directory,
                           ", assumtion of multicollinearity is violated!\n\n")
 
 
-                """ Assumption 6: Homoscedasticity (equal variance) of residuals """
+                """ 5.1.5.6 Assumption 6: Homoscedasticity (equal variance) of residuals """
                 # --> Goldfeld-Quandt Test
                 # If significant, data don't have equal variances (= Heteroscedasticity)
                 # which is not great.
@@ -485,7 +500,7 @@ def EEG_stats_ttests(working_directory,
                     # https://giphy.com/gifs/queereye-queer-eye-6-queereye6-XCo9O0xRumy2F4iqLa
                 
 
-                """ get beta coefficients (model parameters) for feedback and sfc """
+                """ 5.1.6 get beta coefficients (model parameters) for feedback and sfc """
 
                 # 1st parameter = intercept, 2nd param. = feedback, 3rd param. =  sfc
                 intercept, beta_feedback, beta_sfc = lm.params
@@ -506,7 +521,7 @@ def EEG_stats_ttests(working_directory,
     --> compute 1-sample t-test """
 
 
-    # get list of frequencies and list of channels
+    """ 6.1 get list of frequencies and list of channels """
     freq_bands = set(list(beta_coeffs_res["freq_band"])) 
     ROIs = set(list(beta_coeffs_res["ROI"])) 
      
@@ -529,7 +544,7 @@ def EEG_stats_ttests(working_directory,
                                               "p_sfc", "stat_sfc"])
     
     
-    # loop channels:
+    """ 6.2  loop channels: """
     for roi in ROIs:
         
         # loop frequencies
@@ -539,7 +554,7 @@ def EEG_stats_ttests(working_directory,
              tmp_betas = beta_coeffs_res[(beta_coeffs_res["ROI"] == roi) & (beta_coeffs_res["freq_band"] == freq_band)]
 
 
-             """ test conditions for 1-sample t-tests """
+             """ 6.3 test conditions for 1-sample t-tests """
              # Assumptions:
              # scale of measurement: continuously or ordinaly scaled
              # simple random sample
@@ -566,7 +581,7 @@ def EEG_stats_ttests(working_directory,
                  tmp_betas["beta_sfc"] = rankdata(tmp_betas["beta_sfc"], method='average').tolist()
 
 
-             """ run 1-sample t-tests: """
+             """ 6.4 run 1-sample t-tests: """
              
              # for feedback
              p_feedback = ttest_1samp(tmp_betas["beta_feedback"], 0, axis=0, alternative='two-sided').pvalue
@@ -586,7 +601,7 @@ def EEG_stats_ttests(working_directory,
              t_test_results = t_test_results.append(tmp_df) 
              
 
-    """ False Detection Rate (FDR) Correction to correct for multiple comparisons """
+    """ 6.5 False Detection Rate (FDR) Correction to correct for multiple comparisons """
     # concerning the method argument: 
     # indep = Benjamini/Hochberg for independent or positively correlated tests (default)
 
@@ -600,7 +615,7 @@ def EEG_stats_ttests(working_directory,
                                   is_sorted = False)[1]
 
 #%%
-    """ save results files as csv """
+    """ 7. save results files as csv """
     t_test_results.to_csv(working_directory + "t_test_results.csv", 
                           index = False, 
                           float_format = '%.16g')
@@ -610,7 +625,8 @@ def EEG_stats_ttests(working_directory,
 
 #%%
 
-    """ Create "I'm done!"-message: """
+    """ 8. Create "I'm done!"-message: """
     print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I saved the results for the\nEEG data (part 1: betas & t-test results) as \n't_test_results.csv' and 'beta_coeffs_results.csv' \nin the working directory.\n\n- - - - - - - - - - - - - - - - - - - - - ")
+
 
 # END FUNCTION
