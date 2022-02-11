@@ -7,7 +7,7 @@
 # for Merle's Thesis or just run parts of it.
 
 
-""" Before using this script...
+""" 1. Before using this script...
 
 Please make sure the packages MNE, pyxdf, emd, pingouin and hampel 
 can be installed on your machine if you have never used them before.
@@ -30,7 +30,7 @@ but that doesn't work.)
 """  
 
 #%%
-""" set working directory """
+""" 2. set working directory """
 
 import sys
 # Choose file containing all analysis scripts as wd
@@ -46,7 +46,7 @@ data_file = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 plot_file = "/Users/merle/Desktop/Masterarbeit/Plots/"
 
 #%%
-""" ------ get functions from the other scripts ------ """
+""" 3. get functions from the other scripts """
 
 from EEG_read_xdf import read_in_EEG
 from EEG_preproc import EEG_filter_epoching
@@ -59,9 +59,10 @@ from GSS_stats import GSS_stats
 
 
 #%%
-""" ------------ Part 1: EEG DATA ANALYSIS ------------ """
+""" 4. -------- Part 1: EEG DATA ANALYSIS -------- """
 
-""" ---- 1.1 READ IN EEG DATA ---- """
+
+""" 4.1 READ IN EEG DATA """
 # Input: Raw EEG data (.xdf file)
 # Output: MNE Raw object for each participant containing 
 #         EEG sensor values + timestamps + triggers as annotations
@@ -71,13 +72,13 @@ read_in_EEG(data_file)
 
 
 #%%
-""" ---- 1.2 PREPROCESS EEG DATA ---- """
+""" 4.2 PREPROCESS EEG DATA """
 # Input: MNE Raw object containing EEG data + triggers (Output from 1.1) 
 # Output: 
     # MNE Epochs object containing filtered + epoched EEG data (Format: .fif),
     # Plots: before and after filtering????
     
-""" Settings for picking channels """
+""" 4.2.1 Settings for picking channels """
 # channels to pick up signal from auditory cortex: 
 # 65, 1, 69 & the four neighboring electrodes 33, 38, 66 & 68 
 
@@ -100,7 +101,7 @@ eeg_channel_picks = ["EEG_065", "EEG_001", "EEG_069",
 eog_channels = ["EEG_031", "EEG_021", 
                 "EEG_032", "EEG_026"]
         
-""" Settings for Filtering: """ 
+""" 4.2.2 Settings for Filtering: """ 
 # set filter type
 # = default option; gives improved attenuation using fewer samples than “firwin2”
 #eeg_fir_design = 'firwin' 
@@ -115,7 +116,7 @@ eog_channels = ["EEG_031", "EEG_021",
 # set number of runs to run in parallel
 #n_jobs = 1
 
-""" ICA Settings """
+""" 4.2.3 ICA Settings """
 # ICA method is fastICA (= default)
 # use the first 5 components from the PCA (faster computation, no need to look at all 13 channels)
 #ica_n_components = 5
@@ -124,7 +125,7 @@ eog_channels = ["EEG_031", "EEG_021",
 # use a random seed to get the same results every time we run the ICA on the same data
 #ica_random_state = 97 
 
-""" Settings for Epoching:"""
+""" 4.2.4 Settings for Epoching:"""
 #eeg_prestim_cutoff = -1.5 
 #eeg_poststim_cutoff = 4 
 
@@ -132,14 +133,14 @@ eog_channels = ["EEG_031", "EEG_021",
 # just pass the wd in the function call, but if you want 
 # to change arguments, just put them in the brackets as well. 
 
-""" run preproc function """    
+""" 4.2.5 run preproc function """    
 EEG_filter_epoching(working_directory = data_file, 
                     eeg_channel_picks = eeg_channel_picks, 
                     eog_channels = eog_channels)
 
  
 #%%   
-""" ---- 1.3 STATS FOR EEG DATA ---- """
+""" ---- 4.3 STATS FOR EEG DATA ---- """
 # Input: MNE Epochs object containing filtered + epoched EEG data (Output from 1.2), Settings for the PSD
 # Output: 
     # 1 table containing p- & T-values for each channel & frequency 
@@ -147,9 +148,10 @@ EEG_filter_epoching(working_directory = data_file,
     # (both saved in file you set as working directory)
 
 
-""" Settings for power spectral density (PSD) analysis (using Welch's Method) """ 
 
-""" Part 1: t-tests """
+""" 4.3.1 Part 1: t-tests """
+
+""" Settings for power spectral density (PSD) analysis (using Welch's Method) """ 
 # settings for cropping the epoch:
 #psd_tmin = 1 
 #psd_tmax = 4
@@ -185,11 +187,9 @@ EEG_stats_ttests(working_directory = data_file)
 # hint: p-values are plotted in an R-Script called "Master_Plots"
 
 
-""" Part 2: coherences """
+""" 4.3.2 Part 2: coherences """
 
-
-""" run stats function part 2"""  
-# Settings for computing coherences between ROIs in each freq band:
+""" Settings for computing coherences between ROIs in each freq band """
 
 # sampling frequency of the EEG data
 #eeg_coh_sf = 500 
@@ -232,15 +232,17 @@ EEG_stats_ttests(working_directory = data_file)
 # so you can just pass the wd in the function call, but if you want 
 # to change arguments, just put them in the brackets as well. 
 
+""" run stats function part 2"""  
 EEG_stats_coherences(working_directory = data_file)
+
 
 #%%
 
 
 
-""" ------------ Part 2: GSS DATA ANALYSIS ------------ """
+""" 5. -------- Part 2: GSS DATA ANALYSIS -------- """
 
-""" ---- 2.1 READ IN GRIP STRENGTH SENSOR (GSS) DATA ---- """
+""" 5.1 READ IN GRIP STRENGTH SENSOR (GSS) DATA """
 # Input: Raw GSS data (.xdf file)
 # Output: MNE Epochs object containing GSS values + timestamps
 #         CSV with epoch conditions (info on feedback, sfb, sfc, block, ID)
@@ -255,7 +257,7 @@ read_in_GSS(working_directory = data_file)
 
 
 #%%
-""" ---- 2.2 PREPROCESS GSS DATA ---- """
+""" 5.2 PREPROCESS GSS DATA """
 # Input: MNE Epochs object containing GSS data + triggers (Output from 1.1) 
 # Output: MNE Epochs object containing filtered GSS data (Format: .fif)
 
@@ -287,10 +289,11 @@ GSS_filter_epoching(working_directory = data_file)
 
       
 #%%
-""" ---- STATS FOR GSS DATA ---- """
+""" 5.3 STATS FOR GSS DATA """
 # Input: MNE Epochs object containing filtered + epoched GSS data (Output from 2.2)
 # Output: Results as CSV + new variable 'gss_results_df' (directly returned from function) 
 
+""" Settings """
 # sampling rate is 80 Hz for the GSS data
 #gss_psd_sfreq = 80
 
@@ -318,5 +321,6 @@ GSS_filter_epoching(working_directory = data_file)
 # just pass the wd in the function call, but if you want 
 # to change arguments, just put them in the brackets as well. 
 
+""" run GGS stats function """
 GSS_stats(working_directory = data_file)
         
