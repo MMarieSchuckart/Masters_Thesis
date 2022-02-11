@@ -100,8 +100,8 @@ def read_in_GSS(working_directory):
         # loop streams:
         for stream_idx in range(0, 4):
             
-            # if there are 22 data arrays, it's not the triggers 
-            # and probably not the GSS data, so ignore that stream
+            # if there are 128 data arrays, it's the EEG stream 
+            # --> ignore that stream (not important here)
             if len(streams[stream_idx]["time_series"][0]) == 128:
                 #eeg_idx = stream_idx
                 print(str(stream_idx) + " = EEG")
@@ -198,32 +198,45 @@ def read_in_GSS(working_directory):
         
         # count how many epochs had to be excluded
         epochs_excluded = 0
+        # keep track of which epochs to exclude
+        excl_epoch = []
         
         # get length of each epoch array
         epoch_sizes = []
         for epoch_idx in range(0, len(epoch_data_all)):
             epoch_sizes.append(len(epoch_data_all[epoch_idx]))
-
+    
         # get length of longest epoch (aka max. number of samples)
         max_size = max(epoch_sizes)
         #--> keep in mind we did this, we'll use max_size again later!
         
         # loop epochs 
         for epoch_idx in range(0, len(epoch_data_all)-1):
-            
+    
             # if current epoch is too short...
             if len(epoch_data_all[epoch_idx]) < max_size - 80:
-            
-                # ...exclude epoch from epoch_data_all, epoch_timestamps_all and epoch_sizes
-                del epoch_data_all[epoch_idx]
-                del epoch_timestamps_all[epoch_idx]
-                del epoch_sizes[epoch_idx]
+                        
+                # save index of epoch you want to exclude:
+                excl_epoch.append(epoch_idx)
                 
                 # add 1 excluded epoch to counter
                 epochs_excluded += 1
-                print(str(epochs_excluded) +" epoch(s) had to be excluded because\nthere was more than 1 sec missing.")
+        print(str(epochs_excluded) +
+              " epoch(s) had to be excluded because\nthere was more than 1 sec missing.")
         
         
+        # Exclude epochs now:
+    
+        # small hack: indices are sorted in ascending order, 
+        # which means we'd mess the indices up if we remove rows. 
+        # And thats why I reverse the order. BAM!
+        # (Not that impressive but that's the hack actually.)
+        for idx in sorted(excl_epoch, reverse = True):       
+            del epoch_data_all[idx]
+            del epoch_timestamps_all[idx]
+            del epoch_sizes[idx]   
+            
+            
 #%% 
         """ 2.7 Small overview so the next parts make sense: """ 
 
@@ -401,10 +414,7 @@ def read_in_GSS(working_directory):
 #%%   
 
         """ 2.11 Exclude epochs no trigger was found for """
-        # small hack: indices are sorted in ascending order, 
-        # which means we'd mess the indices up if we remove rows. 
-        # And thats why I reverse the order. BAM!
-        # (Not that impressive but that's the hack actually.)
+        # reverse the order of the indices again!
         if len(exclude_these_epochs) > 0 :
             for idx in sorted(exclude_these_epochs, reverse = True):              
                 del epoch_data_all[idx]
@@ -547,3 +557,5 @@ def read_in_GSS(working_directory):
 
 # run function
 # read_in_GSS(working_directory)
+
+  
