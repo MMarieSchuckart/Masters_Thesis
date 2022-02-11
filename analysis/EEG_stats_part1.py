@@ -1,5 +1,4 @@
 
-
 """ Stats script for Merle's Master's Thesis
 
 Stats for EEG data
@@ -20,9 +19,9 @@ Version 1: 14.01.2022
 # create function for running EEG stats script
 def EEG_stats_ttests(working_directory, 
                      psd_tmin = 1, 
-                     psd_tmax = 4, 
+                     psd_tmax = 6, 
                      psd_sfreq = 500, 
-                     psd_fmin = 4, 
+                     psd_fmin = 3, 
                      psd_fmax = 36, 
                      psd_n_overlap = 0, 
                      psd_n_per_seg = None, 
