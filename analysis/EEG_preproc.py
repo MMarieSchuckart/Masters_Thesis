@@ -39,7 +39,9 @@ def EEG_filter_epoching(working_directory,
 
 #%%     
     
-    """ 1. load packages """
+    """ 1. Settings """
+    
+    """ load packages """
        
     # Python MNE for eeg data analysis / processing:
     # NME should be active by default and should already have the 
@@ -59,22 +61,24 @@ def EEG_filter_epoching(working_directory,
     import pandas as pd
 
 #%%     
-    """ 2. set working directory """
+    """ 2. Read in data """
+    
+    # set working directory
     os.chdir(working_directory)
     
-    """ 3. get list of all .fif files in my directory """
+    # get list of all .fif files in my directory
     # (the asterix in the path means the name of the 
     # file can be anything as long as it has an .xdf ending)
     file_list = glob.glob(working_directory + "eeg_participant" + "*_raw.fif")
-
-    """ 4. keep track of files """
+    
+    # keep track of files
     file = 0
     
  #%%      
-    """ 4. loop fif file names in file_list (aka loop participants): """
+    """ 3. loop fif file names in file_list (aka loop participants): """
     for file_name in file_list:
         
-        """ save participant number"""
+        """ 3.1 save participant number"""
         # the participant numbers in file list are in the wrong order
         # so get the number from the filename instead of the loop index number
 
@@ -87,20 +91,20 @@ def EEG_filter_epoching(working_directory,
             participant = participant[-2:]
         
         
-        """ 4.1 read in fif file """
+        """ 3.2 read in fif file """
         eeg_Raw = mne.io.read_raw_fif(file_name)
 
 #%%  
-        """ 4.2 Preprocessing """
+        """ 4. Preprocessing """
         # (variables used here are set in the main script)
     
-        """ 4.2.1 pick the right channels """
+        """ 4.1 pick the right channels """
         # Pick EEG channels
         eeg_Raw.pick_channels(eeg_channel_picks)
 
 #%%  
         
-        """ 4.2.2 ICA to get rid of blinks in the EEG data """
+        """ 4.2 use ICA to get rid of blinks in the EEG data """
         # highpass filter the data 
         # (the quality of the ICA fit is negatively affected by 
         # low-freq drifts, so this is important!)
@@ -127,7 +131,7 @@ def EEG_filter_epoching(working_directory,
         ica.apply(eeg_Raw)
 
  #%%  
-        """ 4.2.3 filter EEG data """
+        """ 4.3 filter EEG data """
         # (variables are defined at the beginning of the script))
         eeg_Raw.filter(picks = eeg_channel_picks,
                        l_freq = eeg_bandpass_fmin, 
@@ -138,7 +142,7 @@ def EEG_filter_epoching(working_directory,
                        n_jobs = n_jobs)
 
     #%%       
-        """ 4.2.4 Epoching """    
+        """ 4.4 Epoching """    
         # max_force_xxx -> initial maximum grip force of participant
         # block -> Blocks 0 - 3
         # Block 0 = training 
@@ -156,14 +160,14 @@ def EEG_filter_epoching(working_directory,
         #    5. end_trial
         
    #%%        
-        """ 4.3 Get Triggers & save as Annotations object """
+        """ 4.5 Get Triggers & save as Annotations object """
         
         # get trigger timestamps and trigger descriptions
         trigger_descriptions = eeg_Raw.annotations.description.tolist()
         trigger_timestamps = eeg_Raw.annotations.onset.tolist()    
         
    #%%     
-        """ 4.4 get block onsets & crop eeg_Raw to seperate blocks """
+        """ 4.5 get block onsets & crop eeg_Raw to seperate blocks """
         b0_onset = trigger_timestamps[trigger_descriptions.index("block0")]
         
         # if the trigger block1 is in the list of trigger descriptions, save onset.
@@ -184,16 +188,17 @@ def EEG_filter_epoching(working_directory,
         else:
             b_main_Raw = eeg_Raw.copy().crop(tmin = b1_onset)
 
- #%%  
-        """ 4.5 create epochs, only use data from blocks 1 & 2 """
+#%%
+        """ 4.6 create epochs, only use data from blocks 1 & 2 """
         
         """ create events from annotations """
         # use regular expression to look for strings beginning with t (I only need the trial starts)
         # Also, round strings instead of truncating them so we get unique time values
         trial_events, trial_event_id = mne.events_from_annotations(b_main_Raw, regexp = '(^[t]).*$', use_rounding = True)    
-       
 
-        """ create metadata for each epoch containing information on sfb, sfc and feedback condition """
+#%%
+        """ 4.7 create metadata for each epoch containing information 
+        on sfb, sfc and feedback condition """
     
         # create epoch names (--> epoch_001, epoch_002, and so on)
         epoch_colnames = [f'epoch_{n:03}' for n in range(1, len(list(trial_event_id.keys()))+1)]
@@ -242,8 +247,9 @@ def EEG_filter_epoching(working_directory,
         eeg_epochs_metadata = eeg_epochs_metadata.transpose()  
         
         eeg_epochs_metadata.columns = ["feedback", "sfb", "sfc"]
-        
-        """ get epochs, apply baseline correction on the fly """
+
+#%%
+        """ 4.8 get epochs, apply baseline correction on the fly """
         # event = trial start, cut from -1.5 to +7 
         # with baseline form -1.5 - 0           
         trial_epochs = mne.Epochs(b_main_Raw, 
@@ -279,7 +285,7 @@ def EEG_filter_epoching(working_directory,
 
 #%%      
     
-    """ 8. Create "I'm done!"-message: """
+    """ 6. Create "I'm done!"-message: """
     if file == 0:
         print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, something went wrong: I couldn't run the preproc function on any file. Maybe you should have a look at this.\n\n- - - - - - - - - - - - - - - - - - - - - ")
     
@@ -291,4 +297,3 @@ def EEG_filter_epoching(working_directory,
         
     
 # END FUNCTION
-
