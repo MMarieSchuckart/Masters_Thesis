@@ -545,5 +545,7 @@ from GSS_stats import GSS_stats
 GSS_filter_epoching(working_directory)
 # (running this takes some time!)
 
-GSS_stats(working_directory)
+# Unfortunately, you can't test the stats script with 
+# these datasets because sfc was always .15, 
+# so we can't compare the power between sfcs.
 
