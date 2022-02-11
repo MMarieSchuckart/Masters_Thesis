@@ -133,10 +133,10 @@ eog_channels = ["EEG_031", "EEG_021",
 """ 4.2.4 Settings for Epoching:"""
 # Epochs should be cut from -1.5 to +6 sec around trial onset
 # with baseline from -1.5 - 0
-eeg_epochs_tmin = -1.5
-eeg_epochs_tmax = 6
-eeg_epochs_baseline_start = -1.5
-eeg_epochs_baseline_stop = 0
+#eeg_epochs_tmin = -1.5
+#eeg_epochs_tmax = 6
+#eeg_epochs_baseline_start = -1.5
+#eeg_epochs_baseline_stop = 0
 
 # I set all those values as default arguments, so can 
 # just pass the wd in the function call, but if you want 
@@ -163,13 +163,13 @@ EEG_filter_epoching(working_directory = data_file,
 """ Settings for power spectral density (PSD) analysis (using Welch's Method) """ 
 # settings for cropping the epoch:
 #psd_tmin = 1 
-#psd_tmax = 4
+#psd_tmax = 6
 
 # settings for running the PSD:
 # sampling rate of eeg    
 #psd_sfreq = 500
-# freq range we'd like to look at (I need 5-35, so I added +1 at each end)
-#psd_fmin = 4
+# freq range we'd like to look at (I need 4-35, so I added +1 at each end)
+#psd_fmin = 3
 #psd_fmax = 36 
 
 # psd_n_fft = 256*6 #??? 
