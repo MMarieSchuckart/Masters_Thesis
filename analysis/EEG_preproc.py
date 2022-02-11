@@ -24,20 +24,18 @@ def EEG_filter_epoching(working_directory,
                         eeg_bandpass_fmin = 4, 
                         eeg_bandpass_fmax = 35, 
                         n_jobs = 1, 
-                        eeg_prestim_cutoff = -1.5, 
-                        eeg_poststim_cutoff = 4, 
                         ica_n_components = 5, 
                         ica_max_iter = "auto", 
                         ica_random_state = 97,
                         eeg_epochs_tmin = -1.5,
-                        eeg_epochs_tmax = 7,
+                        eeg_epochs_tmax = 6,
                         eeg_epochs_baseline_start = -1.5,
                         eeg_epochs_baseline_stop = 0):    
     
     # I set default arguments, but they can be overwritten 
     # if you set different arguments in the function call.
 
-#%%     
+#%%
     
     """ 1. Settings """
     
@@ -124,9 +122,8 @@ def EEG_filter_epoching(working_directory,
         # ica.plot_sources(ica_filt_raw, show_scrollbars = True)
         # --> first ICA channel (ICA000) seems to capture the blinks quite well
     
-        # exclude first ICA component:
-        # (I assume it'll be the 1st ICA channel for all participants)
-        ica.exclude = [0] 
+        # exclude the first 2 ICA components:
+        ica.exclude = [0,1] 
         # apply ICA to eeg_Raw 
         ica.apply(eeg_Raw)
 
@@ -257,7 +254,8 @@ def EEG_filter_epoching(working_directory,
                                   trial_event_id, 
                                   tmin = eeg_epochs_tmin, 
                                   tmax = eeg_epochs_tmax, 
-                                  baseline = (eeg_epochs_baseline_start, eeg_epochs_baseline_stop), 
+                                  baseline = (eeg_epochs_baseline_start, 
+                                              eeg_epochs_baseline_stop), 
                                   preload = True, 
                                   event_repeated = "drop",
                                   reject_by_annotation = False, 
@@ -297,3 +295,4 @@ def EEG_filter_epoching(working_directory,
         
     
 # END FUNCTION
+
