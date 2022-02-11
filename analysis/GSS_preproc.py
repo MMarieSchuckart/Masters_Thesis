@@ -11,13 +11,8 @@ Output: .fif file containing MNE epochs object with filtered & epoched GSS data
 #%% 
 
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
-#gss_bandpass_fmin = 4 
-#gss_bandpass_fmax = 12 
-#gss_phase = "zero" 
-#gss_window_type = 'hamming' 
-#gss_fir_design = 'firwin' 
-#gss_n_jobs = 1 
 
+#%%
 
 # create function to filter + epoch data automatically
 def GSS_filter_epoching(working_directory, 
@@ -31,7 +26,9 @@ def GSS_filter_epoching(working_directory,
     # I set default arguments, but they can be overwritten 
     # if you set different arguments in the function call.
     
-    """ 1. load packages """
+    """ 1. Settings """
+    
+    """ Load packages """
     # Python MNE for eeg data analysis / processing:
     # NME should be active by default and should already have the 
     # necessary dependencies included (numpy, scipy, and matplotlib).    
@@ -65,7 +62,7 @@ def GSS_filter_epoching(working_directory,
     from hampel import hampel
     
     
-    #%% 
+#%% 
     
     """ 2. set working directory """
     os.chdir(working_directory)
@@ -74,20 +71,18 @@ def GSS_filter_epoching(working_directory,
     # (the asterix in the path means the name of the 
     # file can be anything as long as it has an .xdf ending)
     file_list_epochs = glob.glob(working_directory + "gss_participant" + "*_epo.fif")
-        
-    """ 4. Create empty lists to keep track of plots (before and after filtering)"""
-    #gss_figs_before_filtering = []
-    #gss_figs_after_filtering = []
     
-    """ 5. keep track of files """
+    """ 4. keep track of files """
     file = 0
     
-   #%%  
+#%%  
    
-    """ 6. loop fif file names in file_list (aka loop participants): """
+    """ 5. Loop files, read in  & preprocess data"""
+    
+    """ 5.1 loop fif file names in file_list (aka loop participants): """
     for file_idx in range(0, len(file_list_epochs)):
         
-        """ save participant number"""
+        """ 5.2 save participant number"""
         # the participant numbers in file list are in the wrong order
         # so get the number from the filename instead of the loop index number
         participant = file_list_epochs[file_idx][-11:-8]
@@ -98,13 +93,13 @@ def GSS_filter_epoching(working_directory,
         elif participant[0] == "t":
             participant = participant[-2:]        
         
-        """ 6.1 read in .fif file with the epochs """
+        """ 5.3 read in .fif file with the epochs """
         gss_epochs = mne.read_epochs(file_list_epochs[file_idx])
       
- #%%    
-        """ 6.2 Preprocessing """
+#%%    
+        """ 5.4 Preprocessing """
       
-        """ Hampel Filter """
+        """ 5.4.1 Hampel Filter """
               
         # There's another problem besides the Arduino only recording during trials: 
         # In the trials, there are single sample points missing. 
@@ -163,8 +158,8 @@ def GSS_filter_epoching(working_directory,
         #      plt.legend(['Signal vor dem Filtern', 'Signal nach dem Filtern'], loc = 'lower right')
         #      plt.show()
         
- #%%      
-        """ 6.2.1 EMD (empirical mode decomposition) """
+#%%      
+        """ 5.4.2 EMD (empirical mode decomposition) """
         # (to get rid of motor / heart artifacts if there are any in the signal)
         # Which different oscillations are there in the signal 
         # that are non-linear or non-stationary? 
@@ -206,9 +201,9 @@ def GSS_filter_epoching(working_directory,
             gss_epochs._data[epoch_idx,0,:] = preprocd_gss_signal
 
  
- #%% 
+#%% 
  
-        """ 6.2.3 filter GSS data """
+        """ 5.4.3 filter GSS data """
         
         # Took this part out because I think it's pretty useless to filter the signal 
         # if I only want to compute PSDs anyway?
@@ -245,8 +240,8 @@ def GSS_filter_epoching(working_directory,
         #    plt.show()
 
 
-    #%%         
-        """ 7. save Raw object & epoched data for each participant in the file 
+#%%         
+        """ 6. save Raw object & epoched data for each participant in the file 
         I set as the working directory at the beginning of the script """
         gss_epochs.save(fname = "gss_participant" + str(participant) + "_filtered_epo.fif", fmt = 'single', overwrite = False)
         #gss_epochs_filtered.save(fname = "gss_participant" + str(participant) + "_epo.fif", fmt = 'single', overwrite = False)
@@ -257,10 +252,9 @@ def GSS_filter_epoching(working_directory,
 
     # END LOOP   
     
+#%% 
+    """ 7. Create "I'm done!"-message: """
     
-    #%% 
-    
-    """ 8. Create "I'm done!"-message: """
     if file == 0:
         print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, something went wrong: I couldn't run the preproc function on any file. Maybe you should have a look at this.\n\n- - - - - - - - - - - - - - - - - - - - - ")
     
