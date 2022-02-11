@@ -11,11 +11,14 @@ Output: .csv file containing GSS data + triggers for each participant
 #%%
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
+# %%
+
 # create function to read in data automatically
 def read_in_GSS(working_directory):
     
-
-    """ 1. load packages """
+    """ 1. Settings """
+    
+    """ load packages """
         
     # pyxdf for reading in xdf data:
     import pyxdf
@@ -63,24 +66,24 @@ def read_in_GSS(working_directory):
     # file can be anything as long as it has an .xdf ending)
     file_list = glob.glob(working_directory + "*.xdf")
         
-    """ 3. keep track of participants """
+    # keep track of participants
     participant = 0
     
   #%%      
-    """ 4. loop xdf file names in file_list (aka loop participants): """
+    """ 2.1 loop xdf file names in file_list (aka loop participants): """
     for file_name in file_list:
         
         # save number of current participant
         participant +=  1
         
-        """ 4.1 read in XDF data """
+        """ 2.2 read in XDF data """
         streams, header = pyxdf.load_xdf(file_name)
     
         # Raise a hue & cry if data doesn't have 4 streams!
         assert len(streams) == 4  # 1 EEG markers (?), 1 EEG, 1 stim trigger channel, 1 gss channel
 
         
-        """ 4.2 Build NME data object from scratch """
+        """ 2.3 Build NME data object from scratch """
         # stream 0: general info? actiCHampMarkers (whatever that is)
         # stream 1: Actichamp - EEG data
         # stream 2: PsychoPyMarkers - Experiment triggers
@@ -90,10 +93,11 @@ def read_in_GSS(working_directory):
                
             
   #%%     
-        """ Find out which stream contains which kind of data """
+        """ 2.4 Find out which stream contains which kind of data """
         # The streams might be in a different order in each file, so find out 
         # where the GSS data are and which stream contains the triggers
-            
+        
+        # loop streams:
         for stream_idx in range(0, 4):
             
             # if there are 22 data arrays, it's not the triggers 
@@ -137,7 +141,7 @@ def read_in_GSS(working_directory):
         # For creating Epochs, I need epoched data (duh.). 
         # So what do I do about my continuous signal with weird breaks in it???
         
-        """ Find weird breaks in signal, create data for Epochs object """
+        """ 2.5 Find weird breaks in signal, create data for Epochs object """
         
         # compute difference between timestamps
         # IDEA: If there's a large difference between time stamps, the recording stopped in that interval.
@@ -159,6 +163,7 @@ def read_in_GSS(working_directory):
         # create placeholders for nested lists for epoch data
         epoch_timestamps_all = []
         epoch_data_all = []
+        
         # loop difference array
         for idx in range(0, len(diff_timestamps)):
             
@@ -166,7 +171,7 @@ def read_in_GSS(working_directory):
             if diff_timestamps[idx] > 0.5:
                 print("found break in signal, creating next epoch!")
     
-                # get data for epoch
+                """ found epoch, get data """
                 epoch_timestamps = streams[gss_idx]["time_stamps"][idx_epoch_start:idx]
                 epoch_data = streams[gss_idx]["time_series"][idx_epoch_start:idx]
                 # turn weird nested list into 1D list
@@ -185,7 +190,7 @@ def read_in_GSS(working_directory):
          
                         
 #%%
-        """ Exclude epochs that are too short """
+        """ 2.6 Exclude epochs that are too short """
         # shouldn't happen but you never know
         
         # Let's say we exclude all epochs where there's more 
@@ -220,7 +225,7 @@ def read_in_GSS(working_directory):
         
         
 #%% 
-        """ Small overview so the next parts make sense: """ 
+        """ 2.7 Small overview so the next parts make sense: """ 
 
         # What I'll do now is:
 
@@ -239,7 +244,7 @@ def read_in_GSS(working_directory):
         # Okay so there are going to be a lot of loops now. :-)
         
     #%% 
-        """ Get Triggers """
+        """ 2.8 Get Triggers """
         
         # max_force_xxx -> initial maximum grip force of participant
         # block -> Blocks 0 - 3
@@ -263,8 +268,8 @@ def read_in_GSS(working_directory):
         # turn nested list into "normal" one dimensional list
         trigger_descriptions = list(chain.from_iterable(trigger_descriptions)) 
         
-        """ 4.3.1.1 change trigger descriptions so the trial start descriptions 
-                    contain info on the block & feedback condition """
+        """ 2.9 Change trigger descriptions so the trial start descriptions 
+                contain info on the block & feedback condition """
             
         # start with block 0:
         block_nr = "block0"
@@ -296,7 +301,7 @@ def read_in_GSS(working_directory):
                 
                 
 #%%
-        """ find matching epoch for each trigger """
+        """ 2.10 Find matching epoch for each trigger """
         
         # get all timestamps of trial starts
         # find indices
@@ -319,7 +324,7 @@ def read_in_GSS(working_directory):
         #           This way, there will only be epochs left we couldn't find a trigger for.
         exclude_these_epochs = list(range(0, len(epoch_data_all)))
         
-        # loop timestamps
+        """ 2.10.1 loop triggers """
         for trigger_idx in range(0, len(trial_timestamps)):
 
             # get current trigger we're trying to find a matching epoch for!
@@ -328,12 +333,13 @@ def read_in_GSS(working_directory):
             # we haven't found an epoch for this trigger yet, so...            
             found_epoch = False
 
-            # loop epochs            
+            """ 2.10.2 loop epochs  """           
             for epoch_idx in range(0, len(epoch_data_all)):
                 
                 # get first timestamp from current epoch
                 curr_epoch_onset = epoch_timestamps_all[epoch_idx][0]
-                 
+                
+                """ 2.10.3 Save information on epoch if epoch matches trigger """
                 # if there are less than 200 ms between the trial start trigger and 
                 # the epoch onset, they proooobably belong together
                 if curr_epoch_onset - curr_trig_timestamp < 0.2 and curr_epoch_onset - curr_trig_timestamp > - 0.2:
@@ -374,7 +380,7 @@ def read_in_GSS(working_directory):
                     # trigger as we already found a match!
                     break
 
-                
+            """ 2.10.4 If there is no epoch for the current trigger, print warning """ 
             if found_epoch == False:
                 print("\nEpoch for trigger " + str(trigger_idx) + " could not be found! Sorry girl!")
                 
@@ -388,10 +394,13 @@ def read_in_GSS(working_directory):
         # runtime for this is a bit longer than necessary because we're always 
         # looping all epochs (also the ones we already found) but f*** it.
 
+
         # turn list with epoch data into dataframe:
         gss_epochs_conditions = pd.DataFrame(gss_epochs_conditions, columns=["block", "sfb", "sfc", "feedback", "epoch"])
-                    
-        """ Exclude epochs no trigger was found for """
+
+#%%   
+
+        """ 2.11 Exclude epochs no trigger was found for """
         # small hack: indices are sorted in ascending order, 
         # which means we'd mess the indices up if we remove rows. 
         # And thats why I reverse the order. BAM!
@@ -402,12 +411,8 @@ def read_in_GSS(working_directory):
                 del epoch_timestamps_all[idx]
                 del epoch_sizes[idx]
 
-
-
-
-
 #%% 
-        """ Exclude training block and block 3 """
+        """ 2.12 Exclude training block and block 3 """
         
         # get indices of all epochs from block 0 (training) and block 3
         idx_b0 = gss_epochs_conditions[gss_epochs_conditions.block == "block0"].index.tolist()
@@ -426,7 +431,7 @@ def read_in_GSS(working_directory):
         gss_epochs_conditions["epoch"] = list(range(0, len(epoch_data_all)))
 
 #%% 
-        """ Make sure epochs all have the correct length """
+        """ 2.13 Make sure epochs all have the correct length """
         # Right now, there might be some epochs that are a few 
         # sampling points shorter than others, but for being able to 
         # use MNE Epochs, I need data arrays of the same length so that's a problem.
@@ -434,12 +439,14 @@ def read_in_GSS(working_directory):
         # IDEA: Set max number of sample points, add more timestamps and 
         # 0s as data if there are not enough.
         
-        # Loop epochs, add 0s at the beginning of the data arrays and more 
-        # timestamps at the beginnig of the timestamp arrays so that each epoch 
-        # has exactly the same size (=> max_size).
+        """ Loop epochs, add 0s at the beginning of the data arrays and more 
+            timestamps at the beginnig of the timestamp arrays so that each epoch 
+            has exactly the same size (=> max_size). """
+            
         # Doesn't matter if there are a few 0s at the beginning I guess,
         # most people start pressing the force sensor a few ms after trial onset anyway.
         
+        # loop epochs
         for epoch_idx in range(0, len(epoch_data_all)):
             # check if epoch has the correct length. 
             # If yes, go on to next epoch, if not, add 0s & additional 
@@ -470,7 +477,7 @@ def read_in_GSS(working_directory):
 
         
 #%%
-        """ Create info for MNE Epochs object """
+        """ 2.14 Create info for MNE Epochs object """
 
         info_epochs = mne.create_info(ch_names = ['GSS'], 
                                    ch_types = ['eeg'], 
@@ -481,7 +488,7 @@ def read_in_GSS(working_directory):
         
              
 #%%         
-        """ Create MNE Epochs object """
+        """ 2.15 Create MNE Epochs object """
 
         # first, change data shape a little
         
@@ -514,7 +521,7 @@ def read_in_GSS(working_directory):
         # points in the signal. We'll fix that later in the preproc script. :-)
 
 #%% 
-        """ 4.5 save df with epoched data for each participant in the working directory """ 
+        """ 3. save df with epoched data for each participant in the working directory """ 
         # save epochs
         gss_epochs.save(fname = "gss_participant" + str(participant) + "_epo.fif", fmt = 'single', overwrite = False)
         # save df with info on sfc, sfb, feedback, block & epoch idx
@@ -523,7 +530,7 @@ def read_in_GSS(working_directory):
     ### END LOOP PARTICIPANTS 
     
 #%%    
-    # Create "I'm done!"-message:
+    """ 4. Create "I'm done!"-message: """
     if participant == 1:
         print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I read in " + str(participant) + " xdf-file for you.\nHave a look at the file you set as a \nworking directory in the function call!\n\n- - - - - - - - - - - - - - - - - - - - - ")
         
@@ -540,5 +547,3 @@ def read_in_GSS(working_directory):
 
 # run function
 # read_in_GSS(working_directory)
-
-  
