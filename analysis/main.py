@@ -105,8 +105,10 @@ eog_channels = ["EEG_031", "EEG_021",
         
 """ 4.2.2 Settings for Filtering: """ 
 # set filter type
-# = default option; gives improved attenuation using fewer samples than “firwin2”
 #eeg_fir_design = 'firwin' 
+# firwin is the default option; gives improved 
+# attenuation using fewer samples than “firwin2”
+
 # set type of window function
 #eeg_window_type = 'hamming'    
 # zero phase filter
@@ -114,7 +116,7 @@ eog_channels = ["EEG_031", "EEG_021",
 # highpass filter 
 #eeg_bandpass_fmin = 4
 # lowpass filter 
-#eeg_bandpass_fmax = 35,
+#eeg_bandpass_fmax = 35
 # set number of runs to run in parallel
 #n_jobs = 1
 
@@ -122,14 +124,19 @@ eog_channels = ["EEG_031", "EEG_021",
 # ICA method is fastICA (= default)
 # use the first 5 components from the PCA (faster computation, no need to look at all 13 channels)
 #ica_n_components = 5
-#ica_decim = 5 # only use every 5th sample from the data --> speed up computation
+# only use every 5th sample from the data --> speed up computation
+#ica_decim = 5 
 #ica_max_iter = "auto" 
 # use a random seed to get the same results every time we run the ICA on the same data
 #ica_random_state = 97 
 
 """ 4.2.4 Settings for Epoching:"""
-#eeg_prestim_cutoff = -1.5 
-#eeg_poststim_cutoff = 4 
+# Epochs should be cut from -1.5 to +6 sec around trial onset
+# with baseline from -1.5 - 0
+eeg_epochs_tmin = -1.5
+eeg_epochs_tmax = 6
+eeg_epochs_baseline_start = -1.5
+eeg_epochs_baseline_stop = 0
 
 # I set all those values as default arguments, so can 
 # just pass the wd in the function call, but if you want 
