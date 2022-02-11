@@ -8,7 +8,6 @@ Version 1: 10.02.2022
 
 """
 
-
 #%%
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 #eeg_coh_sf = 500
@@ -28,7 +27,19 @@ def EEG_stats_coherences(working_directory,
                          eeg_coh_detrend = 'constant', 
                          eeg_coh_axis = - 1,
                          eeg_coh_tmin = 1, 
-                         eeg_coh_tmax = 4):
+                         eeg_coh_tmax = 4,
+                         auditory_ROI = ["EEG_001", "EEG_069", 
+                                         "EEG_068","EEG_033"
+                                         "EEG_038","EEG_066", 
+                                         "EEG_065"],
+                         motor_ROI = ["EEG_034", "EEG_002", 
+                                      "EEG_071", "EEG_077", 
+                                      "EEG_005", "EEG_035", 
+                                      "EEG_078"],
+                         visual_ROI = ["EEG_108", "EEG_054", 
+                                       "EEG_055", "EEG_061", 
+                                       "EEG_117", "EEG_118", 
+                                       "EEG_109", "EEG_063"]):
     
         
     # I set default arguments, but they can be overwritten 
@@ -43,9 +54,9 @@ def EEG_stats_coherences(working_directory,
     # from 1 - 4, use eeg_coh_tmin = 1 and eeg_coh_tmax = 4
 
 #%%    
-    """ Settings """
+    """ 1. Settings """
 
-    """ 1. load packages """
+    """ 1.1 load packages """
     
     
     # os for setting working directory
@@ -79,10 +90,8 @@ def EEG_stats_coherences(working_directory,
         array = np.asarray(array)
         idx = (np.abs(array - value)).argmin()
         return array[idx]
-
-
+    
 #%%
-
     """ 2. read in data """
     
     # 2.1 set path to working directory
@@ -91,28 +100,23 @@ def EEG_stats_coherences(working_directory,
     # 2.2 get list of all files in the directory that start 
     # with "eeg" and end with "epo.fif"
     file_list = glob.glob(working_directory + "eeg*epo.fif")
-    
-    # 2.3 create df for coherence values
+        
+    # 2.3 check if there are data from enough subjects to run the tests
+    # This script should work even if you only have 1 dataset,
+    # but it would be pretty rad if there were more:
+    if len(file_list) < 10:
+        # print warning if there are not enough participants to run tests
+        print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nWARNING! \n\nYou have data of less than 10 participants! \nYou can run statistical tests with this \nbut be careful with the interpretation of the results! \n\n- - - - - - - - - - - - - - - - - - - - - ")
+ 
+#%%     
+    """ 3. for each participant, loop epochs, average data from ROIs & compute coherences """
+    # create df for coherence values
     coherences_all = pd.DataFrame(columns = ["participant", "epoch", 
                                              "feedback", "sfb", "sfc", 
                                              "ROI1 x ROI2", "frequency_band", 
-                                             "coherence"])
-    
-    # 2.4 set ROIs:
-    auditory_ROI = ["EEG_001", "EEG_069", "EEG_068","EEG_033"
-                    "EEG_038","EEG_066", "EEG_065"]
-    
-    motor_ROI = ["EEG_034", "EEG_002", "EEG_071", "EEG_077", 
-                 "EEG_005", "EEG_035", "EEG_078"]
-    
-    visual_ROI = ["EEG_108", "EEG_054", "EEG_055", "EEG_061", 
-                  "EEG_117", "EEG_118", "EEG_109", "EEG_063"]
+                                             "coherence"])    
 
-    
- 
-#%%   
-    
-    """ 3. Loop participants """
+    """ 3.1 Loop participants """
     for filename in file_list:
         
         # get participant number from file name string
@@ -132,7 +136,7 @@ def EEG_stats_coherences(working_directory,
 
 
 #%%
-        """ loop epochs """
+        """ 3.2 Loop epochs """
         for pick_epoch in range(0, epochs.__len__()):
                     
             # get single epoch, crop to get time interval from second 1 - second 4 
@@ -151,8 +155,7 @@ def EEG_stats_coherences(working_directory,
             # get channel names
             channels = single_epoch.ch_names
           
-            # loop channels, get average signal for each ROI, save averaged signal
-            
+            """ 3.3 loop channels, get average signal for each ROI, save averaged signal """
             # collect 
             data_motor = []
             data_auditory = []
@@ -185,11 +188,14 @@ def EEG_stats_coherences(working_directory,
             visual_avg_signal = np.array([np.mean(x) for x in zip(*data_visual)])
                 
 #%%
-            """ Compute coherences: Which ROIs are in the different feedback conditions functionally connected?"""
+            """ 3.4 Compute coherences: 
+                Which ROIs are in the different feedback 
+                conditions functionally connected?"""
             
             # for all possible combinations of ROIs, compute coherence
             pairs = [("motor", "visual"), ("motor", "auditory"), ("visual", "auditory")]
             
+            """ 3.4.1 loop ROI-combinations """
             for ROI1, ROI2 in pairs:
                 
                 # get data for ROI1
@@ -219,7 +225,7 @@ def EEG_stats_coherences(working_directory,
                 #plt.ylabel('Coherence')
                 #plt.show()
 
-                """ get average coherence for each freq band """
+                """ 3.4.2 get average coherence for each freq band """
                 # I only want to see the coherences between 4 and 
                 # 35 Hz, for the theta, alpha, beta and gamma band (not 
                 # single frequencies), so get average coherence
@@ -240,7 +246,7 @@ def EEG_stats_coherences(working_directory,
                 # create list of on- and offsets (include onset, exclude offset)
                 freq_band_ranges = [(4, 8), (8, 13), (13, 31), (31, 35)]   
                 
-                # loop frequency bands, get average coherence in each freq
+                # Loop frequency bands, get average coherence in each freq
                 # band and add to df:
                 for freq_band_idx in range(0, len(freq_bands)):
                     
@@ -278,7 +284,8 @@ def EEG_stats_coherences(working_directory,
 
                 
 #%%   
-    """ Average over participants: """    
+    """ 4. Average coherences over participants: """    
+    # only average over participants, keep other grouping factors:
     coh_avg_participants = coherences_all.groupby(["feedback", "sfc", "ROI1 x ROI2", "frequency_band"])["coherence"].mean()
     # Average over participants & sfc conditions: 
     coh_avg_participants_sfc = coherences_all.groupby(["feedback", "ROI1 x ROI2", "frequency_band"])["coherence"].mean()
@@ -292,16 +299,17 @@ def EEG_stats_coherences(working_directory,
               
 #%%    
 
-    """ save dataframes with results as .csv files """
+    """ 5. save dataframes with results as .csv files """
     coherences_all.to_csv(path_or_buf = working_directory + "coherences_all.csv")
     coh_avg_participants.to_csv(path_or_buf = working_directory + "coh_avg_participants.csv")
     coh_avg_participants_sfc.to_csv(path_or_buf = working_directory + "coh_avg_participants_sfc.csv")
     coh_avg_participants_sfc_feedback.to_csv(path_or_buf = working_directory + "coh_avg_participants_sfc_feedback.csv")
     
-    
-    """ Create "I'm done!"-message: """
+                  
+#%%    
+
+    """ 6. Create "I'm done!"-message: """
     print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I saved the results for \nthe coherence analysis of the EEG data in\nthe working directory.\n\n- - - - - - - - - - - - - - - - - - - - - ")
 
 # END OF FUNCTION      
 # Micdrop - Merle out.    
-       
