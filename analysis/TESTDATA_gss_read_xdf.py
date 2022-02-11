@@ -2,7 +2,16 @@
 """ Reading in GSS test data for testing the preproc & stats scripts
 
 Part of Merle's Master Thesis
-Version 1: 02.02.2022
+Version 1: 11.02.2022
+
+
+This script is for reading in some test datasets from Julius  
+where he measured GSS data & used the eyetracker (pilot study? Idk).
+
+These test datasets have a slightly different shape 
+than the other datasets so you can use this script to read them in
+and then you can proceed as you normally would and use 
+the functions for preprocessing & analyzing GSS data.
 
 """
 
@@ -525,6 +534,16 @@ if participant == 1:
 elif participant > 1:
     print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I read in " + str(participant) + " xdf-files for you.\nHave a look at the file you set as a \nworking directory in the function call!\n\n- - - - - - - - - - - - - - - - - - - - - ")
     
-### END FUNCTION    
 
-  
+#%%  
+
+""" 5. Test preproc and stats functions: """
+
+from GSS_preproc import GSS_filter_epoching
+from GSS_stats import GSS_stats
+
+GSS_filter_epoching(working_directory)
+# (running this takes some time!)
+
+GSS_stats(working_directory)
+
