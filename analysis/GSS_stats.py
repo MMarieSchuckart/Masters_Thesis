@@ -10,8 +10,12 @@ Version 1: 13.01.2022
 
 #%%
 
+# wd --> "normal" data:
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
+# wd --> test data from the pilot study:
+#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/trmr_fdbck_ms/"
+    
 #%%
 
 # create function for running EEG stats script
@@ -188,9 +192,9 @@ def GSS_stats(working_directory,
                 power.append(None)
                 freq.append(None)
                 
-            """ 3.1.3 if everything's fine, compute PSD for current epoch and save results """
+           
             else:
-            
+                """ 3.1.3 if everything's fine, compute PSD for current epoch and save results """
                 # Settings:
                             
                 # this is just for testing this part of the script, 
@@ -426,6 +430,7 @@ def GSS_stats(working_directory,
            
 #%% 
     """ 4.1.4 Run repeated measures ANOVA (for 3 dependent groups) """
+    
     sfc_anova_res = rm_anova(data =  sfc_aggregated, 
                              dv = "power", 
                              within = "sfc", 
@@ -717,3 +722,5 @@ def GSS_stats(working_directory,
 
 
 # END OF FUNCTION             
+
+       
