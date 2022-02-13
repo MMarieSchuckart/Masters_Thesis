@@ -12,9 +12,6 @@ Version 1: 13.01.2022
 
 # wd --> "normal" data:
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
-
-# wd --> test data from the pilot study:
-#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/trmr_fdbck_ms/"
     
 #%%
 
@@ -58,6 +55,9 @@ def GSS_stats(working_directory,
     # for dataframes as in R
     import pandas as pd
     
+    # for getting catesian products from 2 lists
+    from itertools import product
+    
     # Shapiro-Wilk test function
     from scipy.stats import shapiro
     
@@ -78,6 +78,7 @@ def GSS_stats(working_directory,
     
     # for plotting
     import matplotlib.pyplot as plt
+
 
 
 #%%
@@ -265,57 +266,105 @@ def GSS_stats(working_directory,
     # END loop participants
           
 #%%
-   
     """ 4. Compute pairwise comparisons """
+
+    """ 4.1 Hypotheses """
     
-    # 1st Hypothesis: Higher scaling of Feedback (sfc) should lead to higher tremor amplitudes, regardless of modality:
-    #                 Power in sfc: 20% < 25% < 30%
+    # 1st Hypothesis: Effect of SFC
+    # Higher scaling of Feedback (sfc) should lead to higher tremor amplitudes.
+    # Power in sfc: 20% < 25% < 30%
     
-    # 2nd Hypothesis: Multisensory Feedback should evoke a stronger reaction aka higher tremor amplitude
-    #                 --> Power should be higher in multisensory feedback condition than in 
-    #                     auditory and visual condition, but no difference auditory & visual feedback. 
+    # Hypothesis 1.1:
+    # This should especially be the case in the only visual feedback condition ov (--> Archer replication), 
+    # otherwise this means  we couldn't show that more visual feedback
+    # leads to higher tremor amplitudes, so the replication failed.
+    # H1: Power(vo, sfc = 20%) < Power(vo, sfc = 25%) < Power(vo, sfc = 30%)
     
-         
-#%%
-    """ 4.1 TEST 1ST HYPOTHESIS  --> SFC """
+    # Hypothesis 1.2:
+    # If the effect of sfc could be shown for the visual feedback, 
+    # this should also be the case for the unisensory auditory condition ao... 
+    # H1: Power(ao, sfc = 20%) < Power(ao, sfc = 25%) < Power(ao, sfc = 30%)
     
-    """ 4.1.1 Aggregate dataframe """
-    # I need 1 value for each participant in each sfc condition
-    # --> aggregate dataframe
+    # Hypothesis 1.3:
+    # ...and for the multisensory audiovisual condition va 
+    # H1: Power(va, sfc = 20%) < Power(va, sfc = 25%) < Power(va, sfc = 30%)
     
-    sfc_aggregated = gss_PSDs_all.groupby(['ID', 'sfc']).mean()
-    # getting the mean for sfb doesn't make sense so delete that column
-    sfc_aggregated = sfc_aggregated.drop(['sfb'], axis=1)
-    # use sfc as column instead of index (you have to do this twice)
-    sfc_aggregated.reset_index(level = 0, inplace = True)
-    sfc_aggregated.reset_index(level = 0, inplace = True)
-      
-#%%
-    """ 4.1.2 Test Assumptions of t-Tests / ANOVAs to see if we can run parametrical tests """
+    # -----------------------------------------------------------------------
     
+    # 2nd Hypothesis: Effect of Feedback condition
+    # Multisensory Feedback should evoke a stronger reaction aka higher tremor amplitudes (regardless of sfc)
+    # Power in va > Power in vo and ao
+    
+    # Hypothesis 2.1: 
+    # Power should be higher in multisensory feedback condition va than in unisensory auditory condition ao
+    # H1: Power(va) > Power(ao)
+    
+    # Hypothesis 2.2: 
+    # Power should be higher in multisensory feedback condition va than in unisensory visual condition vo
+    # H1: Power(va) > Power(vo)
+    
+    # Hypothesis 2.3: 
+    # No difference in Power between the visual and the auditory feedback condition (vo and ao)
+    # H0: Power(vo) = Power(ao)
+    # "test" H0 with alpha = 20%, hope for non-significant result, get Bayes factor
+
+    
+# %%
+
+    """ 4.2 Assumptions of t-Tests / ANOVAs """
+
+    # (we need to check the green ones before using ANOVAs / t-Tests)
+
     # Assumptions of t-Tests:
-    # 1. continuous or ordinal scale of scale of measurement --> given in our case
-    # 2. random sample = the data is collected from a representative, randomly selected portion of the 
+    #   1. continuous or ordinal scale of scale of measurement --> given in our case
+    #   2. random sample = the data is collected from a representative, randomly selected portion of the 
     #                    total population (more or less given, self-selection is real)
-    # 3. data in each group are normally distributed (--> check this!)
-    # 4. reasonably large sample size (ahahahahahahaha yes sure)
-    # 5. homogeneity of variance = Homogeneous (= equal) variance exists when 
-    #                              the standard deviations of samples are approximately equal.
+    """ 3. Normality of distribution --> Shapiro-Wilk Test """
+    #      data in each group are normally distributed (--> check this!)
+    #   4. reasonably large sample size (ahahahahahahaha yes sure)
+    """ 5. Homogeneity of variance --> Levene Test """ 
+    #      = Homogeneous (= equal) variance exists when the standard 
+    #      deviations of samples are approximately equal. (--> check this!)
     
-    # Additional assumption of repeated measures ANOVAs:
-    # Sphericity: the variances of differences in responses between any 
-    #             two levels of the independent variable (within-subjects factor) 
-    #             should be equal. 
-    #             This means for 3 groups, you compute the differences between 
-    #             group 1 & 2 as well as between group 1 & 3 and group 2 & 3 
-    #             and then you check if homogeneity of variance of these differences is given. 
-    #             This assumption is therefore also known as 
-    #             homogeneity-of-variance-of-differences assumption. :-)
-        
+    
+    # Additional assumption of repeated measures ANOVAs:    
+    """ Sphericity --> Mauchly's Test """
+    # the variances of differences in responses between any two levels of the independent 
+    # variable (within-subjects factor) should be equal. 
+    # This means for 3 groups, you compute the differences between group 1 & 2 as well 
+    # as between group 1 & 3 and group 2 & 3 and then you check if homogeneity of 
+    # variance of these differences is given. This assumption is therefore also known 
+    # as the homogeneity-of-variance-of-differences assumption. :-)
+    # (--> check this!)
+
          
 #%%
-    # Test assumption 3 - Normality of Distribution: 
-    """ 4.1.2.1 run Shapiro-Wilk Test """
+    """ 4.2.1 Test Assumptions of t-Tests / ANOVAs to see if we can run parametrical tests """
+    
+    # I'll do all assumptions tests for all groups I'll test 
+    # later on now (I don't do it individually for hypotheses 1 and 2)  
+  
+    """ 4.2.1.1 Aggregate dataframe """
+    # h1 = data for hypotheses 1.1 - 1.3, h2 = data for hypotheses 2.1 - 2.3
+    
+    # For testing hypotheses 1.1 - 1.3, I need 1 value for each participant 
+    # in each sfc & feedback condition --> aggregate dataframe
+    df_aggregated_h1 = gss_PSDs_all.groupby(["ID", "sfc", "feedback"]).mean()
+    # use ID, sfc & feedback as columns instead of indices 
+    # (= you have to reset the index 3x, once for each variable)
+    for i in range(0,3):
+        df_aggregated_h1.reset_index(level = 0, inplace = True)
+        
+    # For testing hypotheses 2.1 - 2.3, I need 1 value for each participant 
+    # in each feedback condition --> aggregate dataframe
+    df_aggregated_h2 = gss_PSDs_all.groupby(["ID", "feedback"]).mean()
+    # use ID & feedback as columns instead of indices 
+    # (= you have to reset the index 2x, once for each variable)
+    for i in range(0,2):
+        df_aggregated_h2.reset_index(level = 0, inplace = True)
+              
+#%%
+    """ 4.2.1.2 Test assumption 3: Normality of Distribution --> Shapiro-Wilk Test """
     # We need to test each group separately.
     # If test is significant, distribution is not Gaussian.
     # If it's not significant, it couldn't be shown that it's not Gaussian (≠ it's Gaussian).
@@ -323,344 +372,370 @@ def GSS_stats(working_directory,
     # I want to collect my results in a df, so get info on the test, the data we tested and the results:
     gss_results_df = pd.DataFrame(columns = ["test name", "data", "p-values", "test statistics", 
                                              "df", "effect size", "bayes factor", "power"])
-    # get unique values in sfc
-    sfc_values = list(set(sfc_aggregated["sfc"]))
-    # save test name (once for each test we run)
-    test_name = ["Shapiro-Wilk Test for Normality of Distribution"]  *  len(sfc_values)
-    df = [None]  *  len(sfc_values)
-    # empty lists for results
-    p_values = []
-    Test_statistics = []
-    data = []
+    # get unique values in sfc and feedback
+    sfc_values = list(set(df_aggregated_h1["sfc"]))
+    feedback_values = list(set(df_aggregated_h1["feedback"]))
     
-    # loop sfc values, test distribution and save test results
-    for sfc_val in sfc_values :
-        # run shapiro wilk test
-        stat, p = shapiro(sfc_aggregated[sfc_aggregated["sfc"] == sfc_val]["power"])
-        # save results
-        p_values.append(p)
-        Test_statistics.append(stat)
-        data.append("power in trials with sfc = " + str(sfc_val))
+    # get all possible combinations (cartesian product) of elements from the 2 lists
+    pairs = list(product(feedback_values, sfc_values))
     
-    # put everything into df
-    gss_results_df["test name"] = pd.Series(test_name)
-    gss_results_df["data"] = pd.Series(data)
-    gss_results_df["p-values"] = pd.Series(p_values)
-    gss_results_df["test statistics"] = pd.Series(Test_statistics)
-    gss_results_df["df"] = pd.Series(df)
-             
-#%%
-    """ 4.1.2.2 If Normality of Distribution is given, run Levene test"""
-    # If none of the p-values are significant, this could mean that all 
-    # distributions are Gaussian, so assumption #3 would be given.
-
-    # --> If all p-values are > 0.05, test homogeneity of variance 
-    # to find out if we can use parametrical tests
+    # assume that all tests will be non-significant and we don't 
+    # have to rank-transform our data later (change this if one of the tests is significant)
+    # and we also don't have to apply a Greenhouse-Geisser Correction.
+    rank_transform_h1 = False
+    rank_transform_h2 = False
+    GG_correction_h1 = False
+    GG_correction_h2 = False
     
-    # before having checked the homogeneity of variance, we assume 
-    # it's not given:
-    run_parametrical_tests = False
-    # We also assume we don't have to use a Greenhouse-Geisser 
-    # correction for the ANOVA:
-    GG_correction = False
-    
-    # get data (not a flexible approach if you add more sfc 
-    # levels but I don't care rn)    
-    sfc_2 = sfc_aggregated[sfc_aggregated["sfc"] == 0.2]["power"]
-    sfc_25 = sfc_aggregated[sfc_aggregated["sfc"] == 0.25]["power"]
-    sfc_3 = sfc_aggregated[sfc_aggregated["sfc"] == 0.3]["power"]
-    
-    # if all p-values of the Shapiro-Wilk tests were significant...
-    if all(p > 0.05 for p in p_values):
+    # loop pairs values, test distribution and save test results
+    for feedback, sfc in pairs:
         
-        # Test assumption 5 - Normality of Distribution: 
-        """ Levene Test """
-        # run Levene test, get p and test statistic        
-        stat, p = levene(sfc_2, sfc_25, sfc_3)
+        # get data 
+        curr_data = df_aggregated_h1[(df_aggregated_h1["sfc"] == sfc) & 
+                                     (df_aggregated_h1["feedback"] == feedback)]["power"]
         
-        # add to results df
-        gss_results_df.loc[len(gss_results_df)] = ["Levene Test for Homogeneity of Variance", 
-                                                   "all sfc groups", 
-                                                   p, stat, None,
-                                                   None, None, None]
+        # save name of dataset
+        data = "power in trials with feedback = " + feedback + " & sfc = " + str(sfc) 
         
-        """ 4.1.2.3 If the Levene test was not significant, run Mauchly's test """ 
-        # If the Levene test was not significant, this means the 
-        # variances of the groups were more or less equal. 
-        # If this is the case, go on with testing the 
-        # last assumtion (aka the ANOVA assumption): Sphericity  
-        if p > 0.05:
-             run_parametrical_tests = True
-
-             # Test ANOVA assumption: Sphericity: 
-             """ run Mauchly’s Test """
-             spher, stat, chi2, df, p = sphericity(sfc_aggregated, dv = 'power', subject = 'ID', within = "sfc")
-             
-             # append results to df
-             gss_results_df.loc[len(gss_results_df)] = ["Mauchly's Test for Sphericity", 
-                                                        "all sfc groups", 
-                                                        p, stat, df,
-                                                        None, None, None]
-             # if sphericity is not given, apply Greenhouse Geisser Correction
-             if p <= 0.05: 
-                 GG_correction = True
-
-        # else if the Levene test was signifcant, the variance differs between the groups, 
-        # so assumption of homogeneity of variance is not given and we can't 
-        # run parametrical tests without rank-transforming the data first. 
-        # --> Keep run_parametrical_tests = False as we set it before running the Levene test.
-        
+        # if there are not enough values (aka less than 3), you can't run the Shapiro-Wilk test 
+        # save None for p and stat instead:
+        if len(curr_data) < 3:
+            stat = None
+            p = None
+            rank_transform_h1 = True
+        # if everything's fine and we have enough data:    
+        else:
+            # run Shapiro-Wilk test
+            stat, p = shapiro(curr_data)
             
-#%% 
-    """ 4.1.3 If assumptions are violated, rank-transform data """
-    
-    # If not all of the p-values from the Shapiro-Wilk tests 
-    # are > 0.05, at least one of the groups is not 
-    # normally distributed, which means parametrical 
-    # tests can't be used without rank-transforming the data first. 
-    # Same applies if homogeneity of variance is not given.
-    # If sphericity is not given, either, apply 
-    # GG correction to p-value after computing the ANOVA.
-    
-    # If assumptions are violated, rank transform data before using ANOVA & t-tests.
-    if (any(p <= 0.05 for p in p_values) or run_parametrical_tests == False):    
-        # if you have ties (aka >= 2x the same value), assign average rank
-        sfc_aggregated["power"] = rankdata(sfc_aggregated["power"], method='average').tolist()
-    
-           
-#%% 
-    """ 4.1.4 Run repeated measures ANOVA (for 3 dependent groups) """
-    
-    sfc_anova_res = rm_anova(data =  sfc_aggregated, 
-                             dv = "power", 
-                             within = "sfc", 
-                             subject = "ID",
-                             correction = True,
-                             effsize = "np2")         
-    
-    # save results
-    stat = float(sfc_anova_res["F"])
-    df1 = float(sfc_anova_res["ddof1"])
-    df2 = float(sfc_anova_res["ddof2"])
-    
-    # Hint: The effect size partial eta-squared is the same as 
-    # eta-squared in the 1-way rep measures ANOVA
-    eff_size = str(float(sfc_anova_res["np2"])) + " (partial-eta squared)"
-    # If the Mauchly Test was significant, apply GG correction
-    if GG_correction:
-        p = float(sfc_anova_res["p-GG-corr"])
-    else: 
-        p = float(sfc_anova_res["p-unc"])
-    
-    # append results to df
-    gss_results_df.loc[len(gss_results_df)] = ["one-way repeated measures ANOVA", 
-                                               "all sfc groups", 
-                                               p, stat, [df1, df2],
-                                               eff_size, None, None]
-              
-#%%            
-    """ 4.1.5 if ANOVA is significant, run t-tests """
-
-    # I assume more feedback (aka higher sfc) --> higher tremor amplitudes
-    # --> this is what I'll test in the t-test: 
-    #     0.25 > 0.2, 0.3 > 0.2 and 0.3 > 0.25
-    pairs = [(0.25, 0.2), (0.3, 0.2), (0.3, 0.25)]
-
-    for pair in pairs:   
-        # run one-sided t-test, assume x > y 
-       res = ttest(x = np.array(sfc_aggregated[sfc_aggregated["sfc"] == pair[0]]["power"]), 
-                   y = np.array(sfc_aggregated[sfc_aggregated["sfc"] == pair[1]]["power"]), 
-                   paired = True, 
-                   alternative = "greater")
-       
-       # use Bonferroni correction on p-values:
-       p = float(res["p-val"]) * len(pairs)
-       
-       stat = float(res["T"])
-       df = float(res["dof"])
-       eff_size = str(float(res["cohen-d"])) + " (Cohen's d)"
-       bayes_factor = float(res["BF10"])
-       power = float(res["power"])
-       
-       # append results to df
-       gss_results_df.loc[len(gss_results_df)] = ["one-sided t-test", 
-                                                  "compare power in sfc: " + str(pair[0]) + " > " + str(pair[1]), 
-                                                  p, stat, df,
-                                                  eff_size, bayes_factor, power]
-       
-    
-#%%    
-    
-    """ 4.2 TEST 2ND HYPOTHESIS --> FEEDBACK """
-    
-    """ 4.2.1 Aggregate dataframe """
-    # I need 1 value for each participant in each feedback condition
-    # --> aggregate dataframe
-    
-    feedback_aggregated = gss_PSDs_all.groupby(['ID', 'feedback']).mean()
-    # getting the mean for sfb & sfc doesn't make sense so delete those columns
-    feedback_aggregated = feedback_aggregated.drop(['sfb'], axis=1)
-    feedback_aggregated = feedback_aggregated.drop(['sfc'], axis=1)
-    # use feedback as column instead of index (you have to do this twice)
-    feedback_aggregated.reset_index(level = 0, inplace = True)
-    feedback_aggregated.reset_index(level = 0, inplace = True)
-
-     
-#%%   
-    
-    # Test assumption 3 - Normality of Distribution: 
-    """ 4.2.2 run Shapiro-Wilk Test """
-    # We need to test each group separately.
-    # If test is significant, distribution is not Gaussian.
-    # If it's not significant, it couldn't be shown that it's not Gaussion (≠ it's Gaussian).
-    
-    # get unique values in sfc
-    feedback_values = list(set(feedback_aggregated["feedback"]))
-    # collect p-values for later use
-    p_values = []
-    # loop feedback values, test distribution and save test results
-    for feedback_val in feedback_values :
-        # run shapiro wilk test
-        stat, p = shapiro(feedback_aggregated[feedback_aggregated["feedback"] == feedback_val]["power"])
-        # save results
-        test_name = "Shapiro-Wilk Test for Normality of Distribution"
-        data = "power in trials with feedback = " + str(feedback_val)
-    
-        p_values.append(p)
-    
-        # put everything into df
-        # add to results df
-        gss_results_df.loc[len(gss_results_df)] = [test_name, 
+            # if test was significant and data are not normally distributed,
+            # rank transform data before running the ANOVA
+            if p <= 0.05:
+                rank_transform_h1 = True
+        
+        # append resuts to df
+        gss_results_df.loc[len(gss_results_df)] = ["Shapiro-Wilk Test for Normality of Distribution", 
                                                    data, 
                                                    p, stat, None,
                                                    None, None, None]
-    
-             
+        
+        
+        # Now do it again but only group by feedback
+        # each feedback condition occurs 3x in the pairs, so make sure 
+        # you only compute this once:
+        if feedback in feedback_values:
+            
+            # delete value from feedback_values so you don't run the following part 
+            # for the current feedback condition again and again:
+            feedback_values.remove(feedback)
+            
+            # get data 
+            curr_data = df_aggregated_h2[df_aggregated_h2["feedback"] == feedback]["power"]
+        
+            # save name of dataset
+            data = "power in trials with feedback = " + feedback
+        
+            # if there are not enough values (aka less than 3), you can't run the Shapiro-Wilk test 
+            # save None for p and stat instead:
+            if len(curr_data) < 3:
+                stat = None
+                p = None
+                rank_transform_h2 = True
+                # if everything's fine and we have enough data:    
+            else:
+                # run Shapiro-Wilk test
+                stat, p = shapiro(curr_data)
+        
+                # if test was significant and data are not normally distributed,
+                # rank transform data before running the ANOVA
+                if p <= 0.05:
+                    rank_transform_h2 = True
+        
+            # append resuts to df
+            gss_results_df.loc[len(gss_results_df)] = ["Shapiro-Wilk Test for Normality of Distribution", 
+                               data, 
+                               p, stat, None,
+                               None, None, None]
+        
+    # sort the df a bit
+    gss_results_df = gss_results_df.sort_values("data")
+         
 #%%
-    """ 4.2.3 If Normality of Distribution is given, run Levene test """
-    # If none of the p-values for the Shapiro-Wilk tests for 
-    # the feedback conditions are significant, this could mean 
-    # that all distributions are Gaussian, so assumption #3 would be given.
+    """ 4.2.1.3 Test assumption 5: Homogeneity of Variance --> Levene test"""
 
-    # --> If all p-values are > 0.05, test homogeneity of variance 
-    # to find out if we can use parametrical tests
+    # If the Shapiro-Wilk Test for a certain group was significant, 
+    # this could mean that the distribution of the data in this group is Gaussian. 
+    # If this is the case for all groups we want to test in a certain test, assumption #3 is given.
+
+    # If none of the p-values of the Shapiro-Wilk tests were 
+    # significant & all datasets had the necessary length to run tests,
+    # test homogeneity of variance
     
-    # before having checked the homogeneity of variance, we assume 
-    # it's not given:
-    run_parametrical_tests = False
-    # We also assume we don't have to use a Greenhouse-Geisser 
-    # correction for the ANOVA:
-    GG_correction = False
-    
-    # get data (not a flexible approach if you add more feedback 
-    # levels but I don't care rn)    
-    feedback_ao = feedback_aggregated[feedback_aggregated["feedback"] == "ao"]["power"]
-    feedback_va = feedback_aggregated[feedback_aggregated["feedback"] == "va"]["power"]
-    feedback_vo = feedback_aggregated[feedback_aggregated["feedback"] == "vo"]["power"]
-    
-    # if all p-values of the Shapiro-Wilk tests were significant...
-    if all(p > 0.05 for p in p_values):
+    # check if this is the case for the data for h1 or h2
+    if rank_transform_h1 == False:
         
-        # Test assumption 5 - Normality of Distribution: 
-        """ run Levene Test """
-        # run Levene test, get p and test statistic        
-        stat, p = levene(feedback_ao, feedback_va, feedback_vo)
+        # collect datasets in a list
+        tmp_list_dfs = []
+    
+        # loop pairs again
+        for feedback, sfc in pairs:
+            
+            # get data 
+            curr_data = df_aggregated_h1[(df_aggregated_h1["sfc"] == sfc) & 
+                                         (df_aggregated_h1["feedback"] == feedback)]["power"]
+            
+            # append to list of dfs
+            tmp_list_dfs.append(curr_data)
         
+        """ Test assumption 5 - Homogeneity of Variance: """
+        """ Levene Test """
+        
+        # run Leve test; hint: the asterix can be used to "unpack" objects, in this case I pass a 
+        # list of arguments and unpack them so they're recognized as single arguments
+        stat, p = levene(*tmp_list_dfs)
+            
         # add to results df
         gss_results_df.loc[len(gss_results_df)] = ["Levene Test for Homogeneity of Variance", 
-                                                   "all feedback groups", 
+                                                   "all combinations of sfc x feedback", 
                                                    p, stat, None,
                                                    None, None, None]
+        # if test was significant, rank transform data later on
+        if p <= 0.05:
+            rank_transform_h1 = True    
+            
+#%%      
+        # If the Levene test was not significant, this means the 
+        # variances of the groups were more or less equal. 
+        # If this is the case, go on with testing the last 
+        # assumtion (aka the ANOVA assumption): Sphericity  --> Mauchly's test 
+        else: 
+            # Spericity can't be computed for 2-way repeated-measures designs 
+            # if neither of the independent variables have 
+            # exactly 2 levels (we have 3 in both). More complex designs are 
+            # neither supported by pingouin
+            # So set GG correction to true in order not to get false positives
+            GG_correction_h1 = True   
+                 
+#%%      
+    # Do it all again for the h1 data (feedback)
+    if rank_transform_h2 == False:
+        # get feedback values again
+        feedback_values = list(set(df_aggregated_h2["feedback"]))
         
-        """ 4.2.3 If the Levene test was not significant, run Mauchly’s Test """
+        # collect datasets in a list
+        tmp_list_dfs = []
+    
+        # loop feedback values
+        for feedback in feedback_values:
+            
+            # get data 
+            curr_data = df_aggregated_h2[df_aggregated_h2["feedback"] == feedback]["power"]
+            
+            # append to list of dfs
+            tmp_list_dfs.append(curr_data)
+            
+            
+        """ Test assumption 5 - Homogeneity of Variance: """
+        """ Levene Test """
+        # run Levene test, get p and test statistic   
+    
+        stat, p = levene(*tmp_list_dfs)
+    
+        # add to results df
+        gss_results_df.loc[len(gss_results_df)] = ["Levene Test for Homogeneity of Variance", 
+                                                   "all feedback levels", 
+                                                   p, stat, None,
+                                                   None, None, None]
+        # if test was significant, rank transform data later on
+        if p <= 0.05:
+            rank_transform_h2 = True
+
+#%%      
         # If the Levene test was not significant, this means the 
         # variances of the groups were more or less equal. 
         # If this is the case, go on with testing the last 
         # assumtion (aka the ANOVA assumption): Sphericity  
-        if p > 0.05:
-             run_parametrical_tests = True
 
-             # Test ANOVA assumption: Sphericity: 
-             """ run Mauchly’s Test """
-             spher, stat, chi2, df, p = sphericity(feedback_aggregated,
-                                                   dv = 'power', 
-                                                   subject = 'ID', 
-                                                   within = "feedback")
-             
-             # append results to df
-             gss_results_df.loc[len(gss_results_df)] = ["Mauchly's Test for Sphericity", 
-                                                        "all feedback groups", 
-                                                        p, stat, df,
-                                                        None, None, None]
-             # if sphericity is not given, apply Greenhouse Geisser Correction
-             if p <= 0.05: 
-                 GG_correction = True
-
-        # else if the Levene test was signifcant, the variance differs between the groups, 
-        # so assumption of homogeneity of variance is not given and we can't 
-        # run parametrical tests without rank-transforming the data first. 
-        # --> Keep run_parametrical_tests = False as we set it before running the Levene test.
-        
+        else: 
+            # Test ANOVA assumption: Sphericity: 
+            """ 4.2.3 If the Levene test was not significant, run Mauchly’s Test """
+            spher, stat, chi2, df, p = sphericity(df_aggregated_h2,
+                                                  dv = "power", 
+                                                  subject = "ID", 
+                                                  within = "feedback")
+      
+            # append results to df
+            gss_results_df.loc[len(gss_results_df)] = ["Mauchly's Test for Sphericity", 
+                                                       "all feedback groups", 
+                                                       p, stat, df,
+                                                       None, None, None]
+            # if sphericity is not given, apply Greenhouse Geisser Correction
+            if p <= 0.05: 
+                GG_correction_h2 = True
+                
             
 #%% 
-    """ 4.2.4 If assumptions are violated, rank-transform data """
+    """ 4.2.2 If assumptions are violated, rank-transform data """
     
     # If not all of the p-values from the Shapiro-Wilk tests 
     # are > 0.05, at least one of the groups is not 
     # normally distributed, which means parametrical 
     # tests can't be used without rank-transforming the data first. 
     # Same applies if homogeneity of variance is not given.
-    # If sphericity is not given, either, apply 
-    # GG correction to p-value after computing the ANOVA.
+
+    # I used this for testing the ANOVAs:
+    #df_aggregated["power"] = [26.5, 5, 14, 35, 10.5, 23.5, 5, 18.5, 25, 4.8,
+    #                          16, 35, 15, 25, 3, 19, 28, 29, 15, 31, 12, 22.5, 
+    #                          4, 19, 29, 7, 15,32, 12.5, 23.5, 1, 17.5]
     
     # If assumptions are violated, rank transform data before using ANOVA & t-tests.
-    if (any(p <= 0.05 for p in p_values) or run_parametrical_tests == False):    
-        # if you have ties (aka >= 2x the same value), assign average rank
-        feedback_aggregated["power"] = rankdata(feedback_aggregated["power"], method='average').tolist()
+    # if you have ties (aka >= 2x the same value), assign average rank
+    if rank_transform_h1:    
+        df_aggregated_h1["power"] = rankdata(df_aggregated_h1["power"], method='average').tolist()
     
+    if rank_transform_h2:    
+        df_aggregated_h2["power"] = rankdata(df_aggregated_h2["power"], method='average').tolist()
+
 #%% 
-    """ 4.2.5 Repeated Measures ANOVA (for 3 dependent groups) """
+    """ 4.3 Run repeated measures ANOVAs """
     
-    feedback_anova_res = rm_anova(data =  feedback_aggregated, 
-                                  dv = "power", 
-                                  within = "feedback", 
-                                  subject = "ID",
-                                  correction = True,
-                                  effsize = "np2")         
+    """ 4.3.1 ANOVA for Hypotheses 1.1 - 1.3: """
+    # 2-way repeated measures ANOVA aka ANOVA for dependent groups with 2 independent variables
     
-    # save results
+    anova_res_h1 = rm_anova(data =  df_aggregated_h1, 
+                            dv = "power", 
+                            within = ["sfc", "feedback"], 
+                            subject = "ID",
+                            correction = True,
+                            effsize = "n2")         
+    
+    # save results:
+    # get results for interaction effect sfc x feedback
     
     # if you don't have enough data / the data in all groups 
     # has range = 0 because you copy & pasted one test df like me
     # the ANOVA won't give you an F value. So it that's the case, 
     # save None instead
     try:
-        stat = float(feedback_anova_res["F"])
+        stat = round(float(anova_res_h1["F"][2]), 3)
     except KeyError:
         stat = None
-
-    stat = float(feedback_anova_res["F"])
-    df1 = float(feedback_anova_res["ddof1"])
-    df2 = float(feedback_anova_res["ddof2"])
-    
-    # Hint: The effect size partial eta-squared is the same as 
-    # eta-squared in the 1-way rep measures ANOVA
-    eff_size = str(float(feedback_anova_res["np2"])) + " (partial-eta squared)"
+        
+    df1 = float(anova_res_h1["ddof1"][2])
+    df2 = float(anova_res_h1["ddof2"][2])
+    eff_size = str(round(float(anova_res_h1["n2"][2]), 3)) + " (eta squared)"
+        
+    """ Mauchly's Test """ 
     # If the Mauchly Test was significant, apply GG correction
-    if GG_correction:
-        p = float(feedback_anova_res["p-GG-corr"])
-    else: 
-        p = float(feedback_anova_res["p-unc"])
-    
+    # --> Problem: in this case, Mauchly's test can't be computed 
+    # (at least the pingouin package says it can't) so use corrected p-value
+    p = round(float(anova_res_h1["p-GG-corr"][2]), 3)
+
     # append results to df
     gss_results_df.loc[len(gss_results_df)] = ["one-way repeated measures ANOVA", 
-                                               "all sfc groups", 
+                                               "all sfc x feedback groups", 
                                                p, stat, [df1, df2],
                                                eff_size, None, None]
-              
-#%%            
-    """ 4.2.6 if ANOVA is significant, run t-tests """
+                 
+#%%  
+    """ 4.3.2 ANOVA for Hypotheses 2.1 - 2.3: """
+    # 1-way repeated measures ANOVA aka ANOVA for dependent groups with 1 independent variable
+    
+    anova_res_h2 = rm_anova(data =  df_aggregated_h2, 
+                            dv = "power", 
+                            within = ["feedback"], 
+                            subject = "ID",
+                            correction = True,
+                            effsize = "n2")         
+    
+    # save results:
+    
+    # if you don't have enough data / the data in all groups 
+    # has range = 0 because you copy & pasted one test df like me
+    # the ANOVA won't give you an F value. So it that's the case, 
+    # save None instead
+    try:
+        stat = round(float(anova_res_h2["F"]), 3)
+    except KeyError:
+        stat = None
+        
+    df1 = float(anova_res_h2["ddof1"])
+    df2 = float(anova_res_h2["ddof2"])
+    eff_size = str(round(float(anova_res_h2["n2"]), 3)) + " (eta squared)"
+        
+    if GG_correction_h2:    
+        """ Mauchly's Test """ 
+        # If Mauchly's Test was significant, apply GG correction
+        # --> Problem: in this case, Mauchly's test can't be computed 
+        # (at least the pingouin package says it can't) so use corrected p-value
+        p = round(float(anova_res_h2["p-GG-corr"]))
+    else:
+        p = round(float(anova_res_h2["p-unc"]), 3)
+        
+    # append results to df
+    gss_results_df.loc[len(gss_results_df)] = ["one-way repeated measures ANOVA", 
+                                               "all feedback groups", 
+                                               p, stat, [df1, df2],
+                                               eff_size, None, None]
+    
 
+#%%            
+    """ 4.3.4 if ANOVA is significant, run t-tests """
+
+    """ 4.3.4.1 for Hypotheses 1.1 - 1.3 """
+    
+    # I assume more feedback (aka higher sfc) --> higher tremor amplitudes
+    # --> this is what I'll test in the t-test (for each feedback condition): 
+    #     0.25 > 0.2, 0.3 > 0.2 and 0.3 > 0.25
+
+    feedback_values = list(set(df_aggregated_h1["feedback"]))
+    pairs = [(0.25, 0.2), (0.3, 0.2), (0.3, 0.25)]
+    
+    for feedback in feedback_values:
+
+        # get data
+        feedback_df = df_aggregated_h1[df_aggregated_h1["feedback"] == feedback]
+        
+        for sfc_1, sfc_2 in pairs:   
+           
+            # get data
+            X = np.array(feedback_df[feedback_df["sfc"] == sfc_1]["power"])
+            Y = np.array(feedback_df[feedback_df["sfc"] == sfc_2]["power"])
+            
+            # check if both arrays have at least 2 elements
+            if len(X) < 2 or len(Y) < 2:
+                # go to the next pair if you can't run tests with these data
+                continue
+            else:
+                # run one-sided t-test, assume x > y 
+                res = ttest(x = X, 
+                            y = Y, 
+                            paired = True, 
+                            alternative = "greater")
+               
+                # use Bonferroni correction for p-values:
+                p = float(res["p-val"]) * (len(pairs) * len(feedback_values))
+               
+                stat = float(res["T"])
+                df = float(res["dof"])
+                eff_size = str(float(res["cohen-d"])) + " (Cohen's d)"
+                bayes_factor = float(res["BF10"])
+                power = float(res["power"])
+                
+                # create description of the data you tested
+                data = "for feedback: " + feedback + ", compare power in sfc: " + str(sfc_1) + " > " + str(sfc_2)
+               
+                # append results to df
+                gss_results_df.loc[len(gss_results_df)] = ["one-sided t-test", 
+                                                           data,
+                                                           p, stat, df,
+                                                           eff_size, bayes_factor, power]
+               
+            
+#%%    
+    
+    """ 4.3.4.2 for Hypotheses 2.1 - 2.3 """
+    
     # 1. I assume ao should evoke at least the same tremor intensity as vo, 
     #    so I have to "test" the H0 I guess 
     # 2. I also assume multisensory feedback should lead to higher 
@@ -668,41 +743,54 @@ def GSS_stats(working_directory,
     
     # --> this is what I'll test: 
     #     ao ≠ vo (--> 2-sided, alpha = 20%, hope for non-significant result).     
-    #     0.25 > 0.2, 0.3 > 0.2 and 0.3 > 0.25
     pairs = [("ao", "vo"), ("va", "ao"), ("va", "vo")]
     alternative = ["two-sided", "greater", "greater"]
     test_name = ["two-sided t-test (alpha 20%)", "one-sided t-test", "one-sided t-test"]
     data = ["compare power in feedback: ao ≠ vo", 
             "compare power in feedback: va > ao",
             "compare power in feedback: va > vo"]
+    
+    # I need 1 value for each participant in each feedback condition 
+    # so aggregate df again:
+        
+        
+        
          
     # loop our planned tests:
     for idx in range(0, len(pairs)): 
         
         # get data for current pair we'd like to compare
-        pair = pairs[idx]
-        # run one-sided t-test, assume x > y 
-        res = ttest(x = np.array(feedback_aggregated[feedback_aggregated["feedback"] == pair[0]]["power"]), 
-                    y = np.array(feedback_aggregated[feedback_aggregated["feedback"] == pair[1]]["power"]), 
-                    paired = True, 
-                    alternative = alternative[idx])
-       
-        # use Bonferroni correction on p-value:
-        p = float(res["p-val"]) * len(pairs)
+        feedback1, feedback2 = pairs[idx]
         
-        stat = float(res["T"])
-        df = float(res["dof"])
-        eff_size = str(float(res["cohen-d"])) + " (Cohen's d)"
-        bayes_factor = float(res["BF10"])
-        power = float(res["power"])
-       
-        # append results to df
-        gss_results_df.loc[len(gss_results_df)] = [test_name[idx], 
-                                                   data[idx], 
-                                                   p, stat, df,
-                                                   eff_size, bayes_factor, power]
-    
-          
+        X = np.array(df_aggregated_h2[df_aggregated_h2["feedback"] == feedback1]["power"])
+        Y = np.array(df_aggregated_h2[df_aggregated_h2["feedback"] == feedback2]["power"])
+        
+        # check if both arrays have at least 2 elements
+        if len(X) < 2 or len(Y) < 2 or len(X) != len(Y):
+            # go to the next pair if you can't run tests with these data
+            continue
+        else:
+            # run one-sided t-test, assume x > y 
+            res = ttest(x = X, 
+                        y = Y, 
+                        paired = True, 
+                        alternative = alternative[idx])
+           
+            # use Bonferroni correction for p-values:
+            p = float(res["p-val"]) * len(pairs)
+            
+            stat = float(res["T"])
+            df = float(res["dof"])
+            eff_size = str(float(res["cohen-d"])) + " (Cohen's d)"
+            bayes_factor = float(res["BF10"])
+            power = float(res["power"])
+           
+            # append results to df
+            gss_results_df.loc[len(gss_results_df)] = [test_name[idx], 
+                                                       data[idx], 
+                                                       p, stat, df,
+                                                       eff_size, bayes_factor, power]
+        
 #%%    
 
     """ 5. save dataframe with results as .csv """
@@ -721,6 +809,4 @@ def GSS_stats(working_directory,
     return(gss_results_df)
 
 
-# END OF FUNCTION             
-
-       
+# END OF FUNCTION    
