@@ -749,12 +749,6 @@ def GSS_stats(working_directory,
     data = ["compare power in feedback: ao ≠ vo", 
             "compare power in feedback: va > ao",
             "compare power in feedback: va > vo"]
-    
-    # I need 1 value for each participant in each feedback condition 
-    # so aggregate df again:
-        
-        
-        
          
     # loop our planned tests:
     for idx in range(0, len(pairs)): 
@@ -809,4 +803,6 @@ def GSS_stats(working_directory,
     return(gss_results_df)
 
 
-# END OF FUNCTION    
+# END OF FUNCTION             
+
+       
