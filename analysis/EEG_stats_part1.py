@@ -343,8 +343,7 @@ def EEG_stats_ttests(working_directory,
                 # fit model (ols = ordinary least squares; an OLS 
                 # regression is the same as a linear regression)
                 lm = smf.ols(formula='power_value ~ feedback + sfc', data = df_freq_band).fit()
-                
-                
+
                 
                 """ 5.1.5 check assumptions of linear regression """
                 # Assumptions of OLS regressions:
@@ -361,7 +360,9 @@ def EEG_stats_ttests(working_directory,
                 # So print "assumption violated" if one of the assumptions is violated.
                 # Don't know how to automate this for the visual checks though.
                 
-                                
+                # rank transform data if assumptions are violated
+                # we haven't detected any violation yet, so...
+                rank_transform = False                       
                 
                 """ 5.1.5.1 Assumption 1: Linearity of data """
                 # You can only check this by visual inspection
@@ -399,7 +400,7 @@ def EEG_stats_ttests(working_directory,
                 # If test is significant, distribution is not Gaussian - rank transform data 
                 # before computing tests
                 # If it's not significant, it couldn't be shown that it's not Gaussian (≠ it's Gaussian).
-    
+
                 # get unique values in sfc & feedback
                 sfc_values = list(set(df_freq_band["sfc"]))
                 feedback_values = list(set(df_freq_band["feedback"]))
@@ -431,7 +432,7 @@ def EEG_stats_ttests(working_directory,
                     print("\n\nWARNING: \nParticipant " + participant + ", ROI: " + 
                           roi + ", Freq. Band: " + freq_band + 
                           "\nAssumtion of normally distributed data \nin all groups is violated!\n\n")
-                
+                    rank_transform = True
                 
                 """ 5.1.5.3 Assumption 3: Mean of Residuals = 0 """
                 # Get mean of residuals. This can be an insanely small number, 
@@ -444,7 +445,7 @@ def EEG_stats_ttests(working_directory,
                           roi + ", Freq. Band: " + freq_band + 
                           "\nMean of Residuals is " + str(round(lm.resid.mean(), 3)) +
                           ", so assumtion that mean of residuals = 0 is violated!\n\n")
-                
+                    rank_transform = True
 
                 """ 5.1.5.4 Assumption 4: little to no multicollinearity of residuals """
                 # The features should be linearly independent aka we should not be 
@@ -467,7 +468,7 @@ def EEG_stats_ttests(working_directory,
                     print("\n\nWARNING: \nParticipant " + participant + ", ROI: " + 
                           roi + ", Freq. Band: " + freq_band + 
                           "\nAssumtion of no multicollinearity in the data is violated!\n\n")
-                    
+                    rank_transform = True
                     
                 """ 5.1.5.5 Assumption 5: little to no autocorrelation of residuals """
                 # --> Durbin Watson Test
@@ -480,7 +481,7 @@ def EEG_stats_ttests(working_directory,
                           roi + ", Freq. Band: " + freq_band + 
                           "\nDurbin Watson Test statistic is " + str(dw_test_stat) +
                           ", assumtion of multicollinearity is violated!\n\n")
-
+                    rank_transform = True
 
                 """ 5.1.5.6 Assumption 6: Homoscedasticity (equal variance) of residuals """
                 # --> Goldfeld-Quandt Test
@@ -497,10 +498,17 @@ def EEG_stats_ttests(working_directory,
                     # For the record: I wanted to print this gif as an addition 
                     # to the hetero-warning-message: 
                     # https://giphy.com/gifs/queereye-queer-eye-6-queereye6-XCo9O0xRumy2F4iqLa
-                
+                    rank_transform = True
 
                 """ 5.1.6 get beta coefficients (model parameters) for feedback and sfc """
 
+                # rank transform data if necessary:
+                if rank_transform:
+                    df_freq_band["power_value"] = rankdata(df_freq_band["power_value"], method='average').tolist()
+
+                    # fit model again with rank transformed data:
+                    lm = smf.ols(formula='power_value ~ feedback + sfc', data = df_freq_band).fit()
+                    
                 # 1st parameter = intercept, 2nd param. = feedback, 3rd param. =  sfc
                 intercept, beta_feedback, beta_sfc = lm.params
                                         
