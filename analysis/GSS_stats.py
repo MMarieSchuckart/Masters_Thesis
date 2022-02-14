@@ -20,7 +20,8 @@ def GSS_stats(working_directory,
               gss_psd_sfreq = 80, 
               gss_psd_fmin = 4, 
               gss_psd_fmax = 12, 
-              gss_psd_n_overlap = 0, 
+              gss_n_fft = 80,
+              gss_psd_n_overlap = 16, 
               gss_psd_n_per_seg = None, 
               gss_psd_n_jobs = 1, 
               gss_psd_average = 'mean', 
@@ -134,9 +135,8 @@ def GSS_stats(working_directory,
         # Hint: We don't loop channels here because we only have one ;-)
         
         """ 3.1 Loop epochs """
-        # placeholders for getting power peak and corresponding frequency
+        # placeholders for getting sum of power values from PSD
         power = []
-        freq = []
         
         for pick_epoch in range(0, epochs.__len__()):   
             
@@ -189,26 +189,12 @@ def GSS_stats(working_directory,
                 print("Participant didn't react or reacted to slow\nin epoch " + 
                       str(pick_epoch) + ", excluding this epoch now!" )
                 # don't compute PSD for this epoch, save None 
-                # instead as peak freq and power value:
+                # instead as power value:
                 power.append(None)
-                freq.append(None)
                 
            
             else:
-                """ 3.1.3 if everything's fine, compute PSD for current epoch and save results """
-                # Settings:
-                            
-                # this is just for testing this part of the script, 
-                # I set these as arguments in the function call:
-                #gss_psd_sfreq = 80 
-                #gss_psd_fmin = 4 
-                #gss_psd_fmax = 12 
-                #gss_psd_n_overlap = 0 
-                #gss_psd_n_per_seg = None 
-                #gss_psd_n_jobs = 1
-                #gss_psd_average = 'mean' 
-                #gss_psd_window = 'hamming'
-
+                """ 3.1.3 if everything's fine, compute PSD for current epoch and save results """                
 
                 # plot psd (no clue which Method this is, the MNE docs don't want me to know this)
                 #single_epoch.plot_psd(fmin = 4, fmax = 12, spatial_colors = True)
@@ -228,34 +214,24 @@ def GSS_stats(working_directory,
                                                                  sfreq = gss_psd_sfreq, 
                                                                  fmin = gss_psd_fmin, 
                                                                  fmax = gss_psd_fmax, 
-                                                                 n_fft = len(single_epoch), 
+                                                                 n_fft = gss_n_fft, 
                                                                  n_overlap = gss_psd_n_overlap, 
                                                                  n_per_seg = gss_psd_n_per_seg, 
                                                                  n_jobs = gss_psd_n_jobs, 
                                                                  average = gss_psd_average, 
                                                                  window = gss_psd_window)
-                
-                #  round frequencies
-                freqs = np.round(freqs, 1)
+                        
+                """ 3.1.3.2 get sum of power values between 4 & 12 Hz """
+                sum_power = sum(psds)
     
-                # turn psds array into list
-                psds = psds.tolist()
-    
-                """ 3.1.3.2 get highest power value and corresponding frequency """
-                peak_power = max(psds)
-                peak_freq = freqs[psds.index(max(psds))]
-    
-                # save peak frequency & corresponding power value 
-                # as temporary 1 row df:
-                power.append(peak_power)
-                freq.append(peak_freq)
+                # append to list of power values:
+                power.append(sum_power)
                      
         # END loop epochs
         
-        """ 3.1.4 put frequency and power values into df gss_PSDs_all """
+        """ 3.1.4 put power values into df gss_PSDs_all """
         # append freq and power to gss_epochs_conditions
         gss_epochs_conditions["power"] = power
-        gss_epochs_conditions["frequency"] = freq
         
         # create list with participant identifier and append to gss_epochs_conditions as well
         gss_epochs_conditions["ID"] = [participant] * len(gss_epochs_conditions)
@@ -806,3 +782,4 @@ def GSS_stats(working_directory,
 # END OF FUNCTION             
 
        
+        
