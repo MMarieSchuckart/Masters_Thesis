@@ -1,3 +1,4 @@
+
 """ Stats script for Merle's Master's Thesis
 
 Stats for EEG data
@@ -10,13 +11,6 @@ Version 1: 10.02.2022
 
 #%%
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
-#eeg_coh_sf = 500
-#eeg_coh_window = 'hann' 
-#eeg_coh_detrend = 'constant'
-#eeg_coh_axis = - 1
-#eeg_coh_tmin = 1
-#eeg_coh_tmax = 4
-
 
 #%%
 
@@ -24,10 +18,12 @@ Version 1: 10.02.2022
 def EEG_stats_coherences(working_directory, 
                          eeg_coh_sf = 500, 
                          eeg_coh_window = 'hann', 
-                         eeg_coh_detrend = 'constant', 
+                         eeg_coh_detrend = False, 
                          eeg_coh_axis = - 1,
                          eeg_coh_tmin = 1, 
                          eeg_coh_tmax = 4,
+                         eeg_coh_nperseg = 500,
+                         eeg_coh_noverlap = 100,
                          auditory_ROI = ["EEG_001", "EEG_069", 
                                          "EEG_068","EEG_033"
                                          "EEG_038","EEG_066", 
@@ -212,12 +208,16 @@ def EEG_stats_coherences(working_directory,
                                 
                 # compute coherence, get coherence value 
                 # for each frequency:
+                # (use the same settings for the Welch-PSD as in EEG_stats1)
                 f, Cxy = signal.coherence(x = x, 
                                           y = y, 
                                           fs = eeg_coh_sf, 
                                           window = eeg_coh_window,
                                           detrend = eeg_coh_detrend, 
-                                          axis = eeg_coh_axis)
+                                          axis = eeg_coh_axis,
+                                          nperseg = eeg_coh_nperseg,
+                                          noverlap = eeg_coh_noverlap
+                                          )
 
                 # Plot it!
                 #plt.plot(f, Cxy)
@@ -237,6 +237,10 @@ def EEG_stats_coherences(working_directory,
                 # 3. beta: 13 - 30)   
                 # 4. gamma: > 30, I'll just use 31 - 35 so it matches 
                 # the range of the PSD in stats part 1
+                
+                # The following part is a bit redundant because we have 1 
+                # coherence value for each frequency, but if you change the 
+                # settings this could change, too.
                 
                 # round frequencies:
                 f = np.round(f, 1)
