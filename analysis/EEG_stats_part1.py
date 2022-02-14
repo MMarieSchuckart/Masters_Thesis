@@ -21,9 +21,10 @@ def EEG_stats_ttests(working_directory,
                      psd_tmin = 1, 
                      psd_tmax = 6, 
                      psd_sfreq = 500, 
-                     psd_fmin = 3, 
-                     psd_fmax = 36, 
-                     psd_n_overlap = 0, 
+                     psd_fmin = 4, 
+                     psd_fmax = 35, 
+                     psd_n_fft = 500,
+                     psd_n_overlap = 100, 
                      psd_n_per_seg = None, 
                      psd_n_jobs = 1, 
                      psd_average = 'mean', 
@@ -191,31 +192,28 @@ def EEG_stats_ttests(working_directory,
                                                                  sfreq = psd_sfreq, 
                                                                  fmin = psd_fmin, 
                                                                  fmax = psd_fmax, 
-                                                                 n_fft = len(channel_epoched_data), 
+                                                                 n_fft = 500, 
                                                                  n_overlap = psd_n_overlap, 
                                                                  n_per_seg = psd_n_per_seg, 
                                                                  n_jobs = psd_n_jobs, 
                                                                  average = psd_average, 
                                                                  window = psd_window)
-                # round frequencies
-                freqs = np.round(freqs, 1)
     
                 """ 3.4 Loop frequencies """
-                for freq_val in range(0,len(freqs)-1):
-    
-                    # if freq value is an integer...
-                    if freqs[freq_val].is_integer():
-                        # get corresponding value from psds array and add to df
-                        freq = freqs[freq_val] 
-                        psd_val = psds[freq_val]                  
+                for freq_idx in range(0, len(freqs)):
+
+                    # get frequency and corresponding value from psds 
+                    # array and add both to df
+                    freq = freqs[freq_idx] 
+                    psd_val = psds[freq_idx]                 
      
-                        # save nr of participant, nr of epoch, metadata,
-                        # nr of channel, frequency & corresponding power value 
-                        # as temporary 1 row df:
-                        tmp_df.loc[0] = [part_nr, epoch_nr, feedback, sfb, sfc, channel_nr, freq, psd_val]
+                    # save nr of participant, nr of epoch, metadata,
+                    # nr of channel, frequency & corresponding power value 
+                    # as temporary 1 row df:
+                    tmp_df.loc[0] = [part_nr, epoch_nr, feedback, sfb, sfc, channel_nr, freq, psd_val]
                         
-                        # append as new row to dataframe containing the values for all participants:
-                        power_vals_all = power_vals_all.append(tmp_df)
+                    # append as new row to dataframe containing the values for all participants:
+                    power_vals_all = power_vals_all.append(tmp_df)
                     
                 # END loop frequencies    
             # END loop channels
@@ -467,21 +465,20 @@ def EEG_stats_ttests(working_directory,
                 if any(vif[1:]) != 1: 
                     print("\n\nWARNING: \nParticipant " + participant + ", ROI: " + 
                           roi + ", Freq. Band: " + freq_band + 
-                          "\nAssumtion of no multicollinearity in the data is violated!\n\n")
+                          "\nAssumtion of no multicollinearity in the data is violated!\nYour predictors are correlated, try 'merging' them to 1 variable!\n\n")
                     rank_transform = True
                     
                 """ 5.1.5.5 Assumption 5: little to no autocorrelation of residuals """
                 # --> Durbin Watson Test
                 # If test statistic of Durbin Watson Test is outside a range 
                 # of 1.5 - 2.5, you have autocorrelation in your data 
-                # (aka assumption of multicollinearity is violated)
                 dw_test_stat = round(durbin_watson(lm.resid), 3)
                 if dw_test_stat < 1.5 or dw_test_stat > 2.5:
-                    print("\n\nWARNING: \nParticipant " + participant + ", ROI: " + 
+                    print("\n\nWARNING: \n\nParticipant " + participant + ", ROI: " + 
                           roi + ", Freq. Band: " + freq_band + 
                           "\nDurbin Watson Test statistic is " + str(dw_test_stat) +
-                          ", assumtion of multicollinearity is violated!\n\n")
-                    rank_transform = True
+                          ", assumtion of multicollinearity is violated!\n\nThere seems to be another independent variable that's systematically affecting your data!\n\n")
+                    
 
                 """ 5.1.5.6 Assumption 6: Homoscedasticity (equal variance) of residuals """
                 # --> Goldfeld-Quandt Test
