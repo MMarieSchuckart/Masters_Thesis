@@ -12,7 +12,7 @@ Version 1: 13.01.2022
 
 # wd --> "normal" data:
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
-    
+
 #%%
 
 # create function for running EEG stats script
@@ -71,10 +71,10 @@ def GSS_stats(working_directory,
     # rank transform data
     from scipy.stats import rankdata
     
-    # get one way repeated measures ANOVA
+    # get one way repeated measures ANOVA function
     from pingouin import rm_anova
     
-    # get one way repeated measures ANOVA
+    # get t-test function
     from pingouin import ttest
     
     # for plotting
@@ -641,9 +641,6 @@ def GSS_stats(working_directory,
         
     if GG_correction_h2:    
         """ Mauchly's Test """ 
-        # If Mauchly's Test was significant, apply GG correction
-        # --> Problem: in this case, Mauchly's test can't be computed 
-        # (at least the pingouin package says it can't) so use corrected p-value
         p = round(float(anova_res_h2["p-GG-corr"]))
     else:
         p = round(float(anova_res_h2["p-unc"]), 3)
@@ -660,12 +657,12 @@ def GSS_stats(working_directory,
 
     """ 4.3.4.1 for Hypotheses 1.1 - 1.3 """
     
-    # I assume more feedback (aka higher sfc) --> higher tremor amplitudes
+    # I assume more feedback (aka lower sfc) --> higher tremor amplitudes
     # --> this is what I'll test in the t-test (for each feedback condition): 
-    #     0.25 > 0.2, 0.3 > 0.2 and 0.3 > 0.25
+    #     0.2 > 0.25, 0.2 > 0.3 and 0.25 > 0.3
 
     feedback_values = list(set(df_aggregated_h1["feedback"]))
-    pairs = [(0.25, 0.2), (0.3, 0.2), (0.3, 0.25)]
+    pairs = [(0.2, 0.25), (0.2, 0.3), (0.25, 0.3)]
     
     for feedback in feedback_values:
 
