@@ -317,3 +317,4 @@ def EEG_stats_coherences(working_directory,
 
 # END OF FUNCTION      
 # Micdrop - Merle out.    
+
