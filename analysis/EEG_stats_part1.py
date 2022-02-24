@@ -65,7 +65,8 @@ def EEG_stats_ttests(working_directory,
     from statsmodels.stats.stattools import durbin_watson
     
     # import function for 1-sample t-test
-    from scipy.stats import ttest_1samp
+    #from scipy.stats import ttest_1samp
+    from pingouin import ttest
 
     # function for false detection rate (FDR) correction
     from statsmodels.stats.multitest import fdrcorrection as fdr
@@ -301,7 +302,7 @@ def EEG_stats_ttests(working_directory,
 
 #%%
 
-    """ 5.1 Stats Loop Nr 2: Loop participants, channels & frequencies
+    """ 5.1 Stats Loop Nr 2: Loop participants, ROIs & frequency bands
     --> compute beta coefficients """
         
     # recode data
@@ -532,12 +533,12 @@ def EEG_stats_ttests(working_directory,
     
     # prepare empty dfs to save the results from the t-tests:
     tmp_df = pd.DataFrame(columns = ["ROI", "freq_band", 
-                                     "p_feedback", "T_feedback",
-                                     "p_sfc", "T_sfc"])
+                                     "p_feedback", "T_feedback", "df_feedback", "cohens_d_feedback", "BF_feedback",
+                                     "p_sfc", "T_sfc", "df_sfc", "cohens_d_sfc", "BF_sfc"])
     
     t_test_results = pd.DataFrame(columns = ["ROI", "freq_band", 
-                                             "p_feedback", "T_feedback",
-                                             "p_sfc", "T_sfc"])
+                                             "p_feedback", "T_feedback", "df_feedback", "cohens_d_feedback", "BF_feedback",
+                                             "p_sfc", "T_sfc", "df_sfc", "cohens_d_sfc", "BF_sfc"])
     
     tmp_shapiro_df = pd.DataFrame(columns = ["ROI", "freq_band", 
                                              "p_feedback", "stat_feedback",
@@ -555,7 +556,8 @@ def EEG_stats_ttests(working_directory,
         for freq_band in freq_bands:
 
              # get subset of df where ROI == current ROI & freq_band == current freq_band
-             tmp_betas = beta_coeffs_res[(beta_coeffs_res["ROI"] == roi) & (beta_coeffs_res["freq_band"] == freq_band)]
+             tmp_betas = beta_coeffs_res[(beta_coeffs_res["ROI"] == roi) & 
+                                         (beta_coeffs_res["freq_band"] == freq_band)]
 
 
              """ 6.3 test conditions for 1-sample t-tests """
@@ -588,19 +590,34 @@ def EEG_stats_ttests(working_directory,
              """ 6.4 run 1-sample t-tests: """
              
              # for feedback
-             p_feedback = ttest_1samp(tmp_betas["beta_feedback"], 0, axis=0, alternative='two-sided').pvalue
-             T_feedback = ttest_1samp(tmp_betas["beta_feedback"], 0, axis=0, alternative='two-sided').statistic
-
-             # for sfc
-             p_sfc = ttest_1samp(tmp_betas["beta_sfc"], 0, axis=0, alternative='two-sided').pvalue
-             T_sfc = ttest_1samp(tmp_betas["beta_sfc"], 0, axis=0, alternative='two-sided').statistic
+             feedback_ttest_res = ttest(x = tmp_betas["beta_feedback"],
+                                        y = 0, 
+                                        alternative='two-sided')
+             # get results
+             p_feedback = feedback_ttest_res["p-val"][0]
+             T_feedback = feedback_ttest_res["T"][0]
+             df_feedback = feedback_ttest_res["dof"][0]
+             cohens_d_feedback = feedback_ttest_res["cohen-d"][0]
+             BF_feedback = float(feedback_ttest_res["BF10"][0])
              
-
+             
+             
+             # same for sfc:
+             sfc_ttest_res = ttest(x = tmp_betas["beta_sfc"],
+                                        y = 0, 
+                                        alternative='two-sided')
+             # get results
+             p_sfc = sfc_ttest_res["p-val"][0]
+             T_sfc = sfc_ttest_res["T"][0]
+             df_sfc = sfc_ttest_res["dof"][0]
+             cohens_d_sfc = sfc_ttest_res["cohen-d"][0]
+             BF_sfc = float(sfc_ttest_res["BF10"][0])
+             
              # save results in df
              # append results for current channel & frequency to df
              tmp_df.loc[0] = [roi, freq_band, 
-                              p_feedback, T_feedback,
-                              p_sfc, T_sfc]
+                              p_feedback, T_feedback, df_feedback, cohens_d_feedback, BF_feedback,
+                              p_sfc, T_sfc, df_sfc, cohens_d_sfc, BF_sfc]
              # append to big df
              t_test_results = t_test_results.append(tmp_df) 
              
