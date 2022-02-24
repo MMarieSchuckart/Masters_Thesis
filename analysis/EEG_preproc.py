@@ -21,8 +21,8 @@ def EEG_filter_epoching(working_directory,
                         eeg_fir_design = "firwin", 
                         eeg_window_type = "hamming", 
                         eeg_phase = "zero", 
-                        eeg_bandpass_fmin = 4, 
-                        eeg_bandpass_fmax = 35, 
+                        eeg_bandpass_fmin = 3, 
+                        eeg_bandpass_fmax = 36, 
                         n_jobs = 1, 
                         ica_n_components = 5, 
                         ica_max_iter = "auto", 
@@ -96,12 +96,10 @@ def EEG_filter_epoching(working_directory,
         """ 4. Preprocessing """
         # (variables used here are set in the main script)
     
-        """ 4.1 pick the right channels """
-        # Pick EEG channels
-        eeg_Raw.pick_channels(eeg_channel_picks)
-
+        """ 4.1 set average reference """
+        eeg_Raw = eeg_Raw.load_data().set_eeg_reference(ref_channels = "average")
+    
 #%%  
-        
         """ 4.2 use ICA to get rid of blinks in the EEG data """
         # highpass filter the data 
         # (the quality of the ICA fit is negatively affected by 
@@ -116,7 +114,7 @@ def EEG_filter_epoching(working_directory,
 
         # fit ICA
         ica.fit(ica_filt_raw)
-
+ 
         # check what the ICA captured
         eeg_Raw.load_data()
         # ica.plot_sources(ica_filt_raw, show_scrollbars = True)
@@ -138,8 +136,12 @@ def EEG_filter_epoching(working_directory,
                        fir_design = eeg_fir_design, 
                        n_jobs = n_jobs)
 
+#%%
+        """ 4.4 Select channels """
+        eeg_Raw.pick_channels(eeg_channel_picks)
+
     #%%       
-        """ 4.4 Epoching """    
+        """ 4.5 Epoching """    
         # max_force_xxx -> initial maximum grip force of participant
         # block -> Blocks 0 - 3
         # Block 0 = training 
@@ -157,14 +159,14 @@ def EEG_filter_epoching(working_directory,
         #    5. end_trial
         
    #%%        
-        """ 4.5 Get Triggers & save as Annotations object """
+        """ Get Triggers & save as Annotations object """
         
         # get trigger timestamps and trigger descriptions
         trigger_descriptions = eeg_Raw.annotations.description.tolist()
         trigger_timestamps = eeg_Raw.annotations.onset.tolist()    
         
    #%%     
-        """ 4.5 get block onsets & crop eeg_Raw to seperate blocks """
+        """ get block onsets & crop eeg_Raw to seperate blocks """
         b0_onset = trigger_timestamps[trigger_descriptions.index("block0")]
         
         # if the trigger block1 is in the list of trigger descriptions, save onset.
@@ -186,7 +188,7 @@ def EEG_filter_epoching(working_directory,
             b_main_Raw = eeg_Raw.copy().crop(tmin = b1_onset)
 
 #%%
-        """ 4.6 create epochs, only use data from blocks 1 & 2 """
+        """ create epochs, only use data from blocks 1 & 2 """
         
         """ create events from annotations """
         # use regular expression to look for strings beginning with t (I only need the trial starts)
@@ -194,7 +196,7 @@ def EEG_filter_epoching(working_directory,
         trial_events, trial_event_id = mne.events_from_annotations(b_main_Raw, regexp = '(^[t]).*$', use_rounding = True)    
 
 #%%
-        """ 4.7 create metadata for each epoch containing information 
+        """ create metadata for each epoch containing information 
         on sfb, sfc and feedback condition """
     
         # create epoch names (--> epoch_001, epoch_002, and so on)
@@ -246,8 +248,8 @@ def EEG_filter_epoching(working_directory,
         eeg_epochs_metadata.columns = ["feedback", "sfb", "sfc"]
 
 #%%
-        """ 4.8 get epochs, apply baseline correction on the fly """
-        # event = trial start, cut from -1.5 to +7 
+        """ 4.6 get epochs, apply baseline correction on the fly """
+        # event = trial start, cut from -1.5 to +76
         # with baseline form -1.5 - 0           
         trial_epochs = mne.Epochs(b_main_Raw, 
                                   trial_events, 
