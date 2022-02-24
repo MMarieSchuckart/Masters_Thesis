@@ -91,11 +91,11 @@ read_in_EEG(data_file)
 
 eeg_channel_picks = ["EEG_065", "EEG_001", "EEG_069",
                      "EEG_033", "EEG_038", "EEG_066", "EEG_068",
-                     "EEG_71", "EEG_034", "EEG_077", 
+                     "EEG_071", "EEG_034", "EEG_077", 
                      "EEG_002","EEG_005", "EEG_035", "EEG_078", 
-                     "EEG_108", "EEG_54", 
-                     "EEG_55", "EEG_109", "EEG_61", 
-                     "EEG_117", "EEG_118", "EEG_63"]
+                     "EEG_108", "EEG_054", 
+                     "EEG_055", "EEG_109", "EEG_061", 
+                     "EEG_117", "EEG_118", "EEG_063"]
 
 # choose eog channels (the 3 eeg channels from the face)
 #eog_channels = ["EEG_020", "EEG_031", "EEG_032"] 
@@ -105,38 +105,38 @@ eog_channels = ["EEG_031", "EEG_021",
         
 """ 4.2.2 Settings for Filtering: """ 
 # set filter type
-#eeg_fir_design = 'firwin' 
+eeg_fir_design = 'firwin' 
 # firwin is the default option; gives improved 
 # attenuation using fewer samples than “firwin2”
 
 # set type of window function
-#eeg_window_type = 'hamming'    
+eeg_window_type = 'hamming'    
 # zero phase filter
-#eeg_phase = "zero"
+eeg_phase = "zero"
 # highpass filter 
-#eeg_bandpass_fmin = 4
+eeg_bandpass_fmin = 3
 # lowpass filter 
-#eeg_bandpass_fmax = 35
+eeg_bandpass_fmax = 36
 # set number of runs to run in parallel
-#n_jobs = 1
+n_jobs = 1
 
 """ 4.2.3 ICA Settings """
 # ICA method is fastICA (= default)
 # use the first 5 components from the PCA (faster computation, no need to look at all 13 channels)
-#ica_n_components = 5
+ica_n_components = 5
 # only use every 5th sample from the data --> speed up computation
-#ica_decim = 5 
-#ica_max_iter = "auto" 
+ica_decim = 5 
+ica_max_iter = "auto" 
 # use a random seed to get the same results every time we run the ICA on the same data
-#ica_random_state = 97 
+ica_random_state = 97 
 
 """ 4.2.4 Settings for Epoching:"""
 # Epochs should be cut from -1.5 to +6 sec around trial onset
 # with baseline from -1.5 - 0
-#eeg_epochs_tmin = -1.5
-#eeg_epochs_tmax = 6
-#eeg_epochs_baseline_start = -1.5
-#eeg_epochs_baseline_stop = 0
+eeg_epochs_tmin = -1.5
+eeg_epochs_tmax = 6
+eeg_epochs_baseline_start = -1.5
+eeg_epochs_baseline_stop = 0
 
 # I set all those values as default arguments, so can 
 # just pass the wd in the function call, but if you want 
@@ -172,15 +172,10 @@ EEG_filter_epoching(working_directory = data_file,
 #psd_fmin = 3
 #psd_fmax = 36 
 
-# psd_n_fft = 256*6 #??? 
-# 256 is default, but only produces values for each 2nd frequency. 
-# If you multiply by 2, you get roughly each frequency, I guess if 
-# you go high enough, you get perfekt INTs as freqs.
-# If you set n_fft as == len(samples), you get more values aka more freqs.
-# --> I hardcoded the n_fft in the PSD function call in 
-# the EEG_stats() script as == len(samples)
-
-#psd_n_overlap = 0 
+# use segments of 500 samples length (= 1 second)
+#psd_n_fft = 500 
+# make them overlap by 100 samples (= 1/5 second)
+#psd_n_overlap = 100
 #psd_n_per_seg = None 
 #psd_n_jobs = 1
 #psd_average = 'mean'
@@ -208,18 +203,23 @@ EEG_stats_ttests(working_directory = data_file)
 #eeg_coh_window = "hann" 
 
 # detrend data?
-# Idk I think they're already detrended. 
-# I baseline corrected them AND applied 
+# Idk I think they're already pretty much detrended. 
+# I baseline corrected the data AND applied 
 # a high-pass-filter (seriously what else do they want)
-#eeg_coh_detrend = "constant"
+#eeg_coh_detrend = False
 
 # Axis along which the coherence is computed for input x and y
 # default: -1 aka over the last axis
 #eeg_coh_axis = - 1
 
+# Settings for the PSD you use before computing the coherences 
+#eeg_coh_nperseg = 500
+#eeg_coh_noverlap = 100
+
 # which part of the epochs do you want to compute coherences for?
 #eeg_coh_tmin = 1, 
 #eeg_coh_tmax = 4
+
 
 # set ROIs
 #auditory_ROI = ["EEG_001", "EEG_069", 
@@ -311,7 +311,8 @@ GSS_filter_epoching(working_directory = data_file)
 # of the tremor is contained" (Archer et al., 2018)
 #gss_psd_fmin = 4
 #gss_psd_fmax = 12
-#gss_psd_n_overlap = 0 
+#psd_n_fft = 80 
+#gss_psd_n_overlap = 16 
 #gss_psd_n_per_seg = None 
 #gss_psd_n_jobs = 1 
 #gss_psd_average = 'mean' 
