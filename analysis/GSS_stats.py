@@ -10,8 +10,16 @@ Version 1: 13.01.2022
 
 #%%
 
-# wd --> "normal" data:
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+#gss_psd_sfreq = 80 
+#gss_psd_fmin = 4 
+#gss_psd_fmax = 12
+#gss_n_fft = 80
+#gss_psd_n_overlap = 16
+#gss_psd_n_per_seg = None
+#gss_psd_n_jobs = 1
+#gss_psd_average = 'mean'
+#gss_psd_window = 'hamming'
 
 #%%
 
@@ -158,8 +166,7 @@ def GSS_stats(working_directory,
             """ 3.1.2 get data from epoch, exclude epoch if there's at least 1 sec missing """
             # get data from epoch as list
             epoch_data = list(single_epoch.get_data().flatten())
-            
-            
+    
             # if there is at least 1 Zero at the beginning of the recording, 
             # count how many there are and go to next epoch (aka exclude current epoch) 
             # if there are more than 80 (aka 1s * 80Hz)
