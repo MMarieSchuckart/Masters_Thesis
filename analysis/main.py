@@ -70,6 +70,11 @@ from GSS_stats import GSS_stats
 #         EEG sensor values + timestamps + triggers as annotations
 # The files from the output are saved in the WD as .fif files.
 
+# Settings:
+# Set EOG channels: 
+eog_channels = ["EEG_031", "EEG_021", 
+                "EEG_032", "EEG_026"]
+
 read_in_EEG(data_file)
 
 
@@ -97,9 +102,7 @@ eeg_channel_picks = ["EEG_065", "EEG_001", "EEG_069",
                      "EEG_055", "EEG_109", "EEG_061", 
                      "EEG_117", "EEG_118", "EEG_063"]
 
-# choose eog channels (the 3 eeg channels from the face)
-#eog_channels = ["EEG_020", "EEG_031", "EEG_032"] 
-# first two are for left eye, second two are for right eye:
+# set EOG channels:
 eog_channels = ["EEG_031", "EEG_021", 
                 "EEG_032", "EEG_026"]
         
@@ -122,8 +125,9 @@ n_jobs = 1
 
 """ 4.2.3 ICA Settings """
 # ICA method is fastICA (= default)
-# use the first 5 components from the PCA (faster computation, no need to look at all 13 channels)
-ica_n_components = 5
+# use the first 15 components from the PCA 
+# (--> faster computation, no need to look at all 128 channels)
+ica_n_components = 15
 # only use every 5th sample from the data --> speed up computation
 ica_decim = 5 
 ica_max_iter = "auto" 
