@@ -24,7 +24,7 @@ def EEG_filter_epoching(working_directory,
                         eeg_bandpass_fmin = 3, 
                         eeg_bandpass_fmax = 36, 
                         n_jobs = 1, 
-                        ica_n_components = 5, 
+                        ica_n_components = 15, 
                         ica_max_iter = "auto", 
                         ica_random_state = 97,
                         eeg_epochs_tmin = -1.5,
@@ -105,7 +105,7 @@ def EEG_filter_epoching(working_directory,
         # (the quality of the ICA fit is negatively affected by 
         # low-freq drifts, so this is important!)
         ica_filt_raw = eeg_Raw.copy()
-        ica_filt_raw.load_data().filter(l_freq = 1., h_freq = None)
+        ica_filt_raw.load_data().filter(l_freq = 1, h_freq = None)
 
         # set up ICA (variables are defined at the beginning of the script)
         ica = ICA(n_components = ica_n_components, 
@@ -114,22 +114,28 @@ def EEG_filter_epoching(working_directory,
 
         # fit ICA
         ica.fit(ica_filt_raw)
- 
+        ica
+        
         # check what the ICA captured
-        eeg_Raw.load_data()
-        # ica.plot_sources(ica_filt_raw, show_scrollbars = True)
-        # --> first ICA channel (ICA000) seems to capture the blinks quite well
+        #eeg_Raw.load_data()
+        #ica.plot_sources(ica_filt_raw, show_scrollbars = True)
     
-        # exclude the first 2 ICA components:
-        ica.exclude = [0,1] 
-        # apply ICA to eeg_Raw 
+        # find out which ICs match the EOG pattern and mark them for exclusion
+        ica.exclude = []
+        eog_indices, eog_scores = ica.find_bads_eog(eeg_Raw, 
+                                                    ch_name = eog_channels, 
+                                                    reject_by_annotation = False,
+                                                    measure = "correlation",
+                                                    threshold = .8)
+
+        # exclude all ICs that match the EOG artifacts from back transformation:
+        ica.exclude = eog_indices
         ica.apply(eeg_Raw)
 
  #%%  
         """ 4.3 filter EEG data """
         # (variables are defined at the beginning of the script))
-        eeg_Raw.filter(picks = eeg_channel_picks,
-                       l_freq = eeg_bandpass_fmin, 
+        eeg_Raw.filter(l_freq = eeg_bandpass_fmin, 
                        h_freq = eeg_bandpass_fmax,   
                        phase = eeg_phase,
                        fir_window = eeg_window_type, 
@@ -261,7 +267,7 @@ def EEG_filter_epoching(working_directory,
                                   preload = True, 
                                   event_repeated = "drop",
                                   reject_by_annotation = False, 
-                                  metadata = eeg_epochs_metadata) # metadata = pass
+                                  metadata = eeg_epochs_metadata) 
         
         # plot the epochs (only plot the first 2 or else it gets super messy)
         #trial_epochs.plot(show_scrollbars = True, n_epochs = 2)
