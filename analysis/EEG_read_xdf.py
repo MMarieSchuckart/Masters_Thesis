@@ -15,7 +15,8 @@ Output: .fif file containing EEG data + triggers for each participant
 #%%
 
 # create function to read in data automatically
-def read_in_EEG(working_directory):
+def read_in_EEG(working_directory, 
+                eog_channels = ["EEG_031", "EEG_021", "EEG_032", "EEG_026"]):
 
 
     """ 1. Settings """
@@ -255,7 +256,11 @@ def read_in_EEG(working_directory):
         # non-causal bandpass filter from 1 - 10 Hz with von Hann window
             
         """ 6.4.1 find all eog events """
-        eog_events = find_eog_events(eeg_Raw)
+        eog_events = find_eog_events(eeg_Raw, 
+                                     l_freq = 1, 
+                                     h_freq = 10, 
+                                     ch_name = eog_channels,
+                                     reject_by_annotation = False)
         
         # set onset as 250 ms before the peak of the blink
         onsets = eog_events[:, 0] / eeg_Raw.info['sfreq'] - 0.25
@@ -325,4 +330,3 @@ def read_in_EEG(working_directory):
 
 # run function
 # read_in_EEG(working_directory)
-
