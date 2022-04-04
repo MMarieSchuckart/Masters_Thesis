@@ -10,8 +10,31 @@ Version 1: 10.02.2022
 """
 
 #%%
+# Settings for testing this script: 
+    
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
 
+#eeg_coh_sf = 500
+#eeg_coh_window = 'hann'
+#eeg_coh_detrend = False 
+#eeg_coh_axis = - 1
+#eeg_coh_tmin = 1
+#eeg_coh_tmax = 4
+#eeg_coh_nperseg = 500
+#eeg_coh_noverlap = 100
+#auditory_ROI = ["EEG_001", "EEG_069", 
+#                "EEG_068","EEG_033"
+#                "EEG_038","EEG_066", 
+#                "EEG_065"]
+#motor_ROI = ["EEG_034", "EEG_002", 
+#             "EEG_071", "EEG_077", 
+#             "EEG_005", "EEG_035", 
+#             "EEG_078"]
+#visual_ROI = ["EEG_108", "EEG_054", 
+#              "EEG_055", "EEG_061", 
+#              "EEG_117", "EEG_118", 
+#              "EEG_109", "EEG_063"]
+                         
 #%%
 
 # create function for running EEG stats script
@@ -86,6 +109,12 @@ def EEG_stats_coherences(working_directory,
         array = np.asarray(array)
         idx = (np.abs(array - value)).argmin()
         return array[idx]
+    
+    # for computing weighted phase lag index (use method = "wpli")
+    #from mne.connectivity import spectral_connectivity
+    
+    # for adding new axis to numpy array   
+    from numpy import newaxis
     
 #%%
     """ 2. read in data """
@@ -206,8 +235,7 @@ def EEG_stats_coherences(working_directory,
                 else:
                     y = visual_avg_signal
                                 
-                # compute coherence, get coherence value 
-                # for each frequency:
+                """ 3.4.2 Compute coherence, get coherence value for each frequency: """
                 # (use the same settings for the Welch-PSD as in EEG_stats1)
                 f, Cxy = signal.coherence(x = x, 
                                           y = y, 
@@ -224,8 +252,57 @@ def EEG_stats_coherences(working_directory,
                 #plt.xlabel('frequency [Hz]')
                 #plt.ylabel('Coherence')
                 #plt.show()
+                
+#%%
+                """ 3.4.3 Compute weighted phase lag index (WPLI)"""
+                # --> Stam et al. “Phase lag index: assessment of functional connectivity 
+                # from multi channel EEG and MEG with diminished bias from common sources” 
+                # Human brain mapping, vol. 28, no. 11, pp. 1178-1193, Nov. 2007.
+                
+                # create 3D numpy array using arrays x and y                
+                #wpli_data = np.array([x, y])
+                # add third axis                 
+                #wpli_data = wpli_data[newaxis, :, :]
 
-                """ 3.4.2 get average coherence for each freq band """
+                # check if it has the right shape (should have shape (n_epochs, n_signals, n_times) )
+                #np.shape(wpli_data)
+                
+                # compute WPLI
+                #wpli, freqs, times, n_epochs, n_tapers = mne.connectivity.spectral_connectivity(data = wpli_data,
+                #                                         method='wpli', 
+                #                                         sfreq = eeg_coh_sf, 
+                #                                         mode ='fourier', 
+                #                                         fmin = 4,
+                #                                         fmax = 35,
+                #                                         fskip = 2)
+                # round freqs a bit:
+                #freqs = np.round(freqs)
+                    
+                # Interpretation of the output:
+                # freqs = frequencies we computed WPLIs for
+                # wpli = Array containing weighted phase lag indices for 
+                # both signals, both signals again (don't ask me, this is from 
+                # the documentation), and each of our 31 frequencies.
+                # np.shape(wpli)
+                
+                # The WPLI values can be somewhere between 0 and 1 (at least in the MNE implementation)
+                # --> https://mne.discourse.group/t/mne-analysis-digest-vol-113-issue-24/1239/2
+                # --> https://mne.discourse.group/t/range-of-diffrent-connectivity-measure/3579
+                
+                # Anyway. I have 2x2 arrays with values for each 
+                # frequency and I don't have a clue what this means.
+
+                # The other output variables are not relevant.
+                
+                # Weird: If I compute this for all epochs & channel combinations, I always get the same output.
+                #print(ROI1, " - ", ROI2, wpli)  
+                
+                # Here's a question concerning all this I asked in the MNE forum (for the record, no answers yet)
+                # https://mne.discourse.group/t/interpretation-of-spectral-connectivity-output-for-weighted-phase-lag-index-wpli-computation/4656
+                
+#%%
+
+                """ 3.4.4 get average coherence for each freq band """
                 # I only want to see the coherences between 4 and 
                 # 35 Hz, for the theta, alpha, beta and gamma band (not 
                 # single frequencies), so get average coherence
@@ -317,4 +394,3 @@ def EEG_stats_coherences(working_directory,
 
 # END OF FUNCTION      
 # Micdrop - Merle out.    
-
