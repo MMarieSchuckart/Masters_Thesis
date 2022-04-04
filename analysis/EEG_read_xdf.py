@@ -9,8 +9,10 @@ Output: .fif file containing EEG data + triggers for each participant
 
 """
         
-#%% 
-#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+#%%
+# Settings for testing this script: 
+# working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+# eog_channels = ["EEG_031", "EEG_021", "EEG_032", "EEG_026"]
 
 #%%
 
