@@ -247,7 +247,8 @@ def GSS_stats(working_directory,
         gss_PSDs_all = gss_PSDs_all.append(gss_epochs_conditions)
         
     # END loop participants
-          
+
+    
 #%%
     """ 4. Compute pairwise comparisons """
 
@@ -259,7 +260,7 @@ def GSS_stats(working_directory,
     
     # Hypothesis 1.1:
     # This should especially be the case in the only visual feedback condition ov (--> Archer replication), 
-    # otherwise this means  we couldn't show that more visual feedback
+    # otherwise this means we couldn't show that more visual feedback
     # leads to higher tremor amplitudes, so the replication failed.
     # H1: Power(vo, sfc = 20%) < Power(vo, sfc = 25%) < Power(vo, sfc = 30%)
     
@@ -367,7 +368,6 @@ def GSS_stats(working_directory,
     # and we also don't have to apply a Greenhouse-Geisser Correction.
     rank_transform_h1 = False
     rank_transform_h2 = False
-    GG_correction_h1 = False
     GG_correction_h2 = False
     
     # loop pairs values, test distribution and save test results
@@ -485,19 +485,7 @@ def GSS_stats(working_directory,
         # if test was significant, rank transform data later on
         if p <= 0.05:
             rank_transform_h1 = True    
-            
-#%%      
-        # If the Levene test was not significant, this means the 
-        # variances of the groups were more or less equal. 
-        # If this is the case, go on with testing the last 
-        # assumtion (aka the ANOVA assumption): Sphericity  --> Mauchly's test 
-        else: 
-            # Spericity can't be computed for 2-way repeated-measures designs 
-            # if neither of the independent variables have 
-            # exactly 2 levels (we have 3 in both). More complex designs are 
-            # neither supported by pingouin
-            # So set GG correction to true in order not to get false positives
-            GG_correction_h1 = True   
+
                  
 #%%      
     # Do it all again for the h1 data (feedback)
@@ -784,6 +772,3 @@ def GSS_stats(working_directory,
 
 
 # END OF FUNCTION             
-
-       
-        
