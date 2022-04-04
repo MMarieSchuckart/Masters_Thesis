@@ -1,5 +1,5 @@
 """ Main Script for Merle's Master's Thesis """
-# Scripts by Merle Schuckart, written Sept. - Dec. 2021 
+# Scripts by Merle Schuckart, written September 2021 - April 2022
 # Github: MMarieSchuckart
 # Email: merle.schuckart@gmx.de
 
@@ -184,6 +184,9 @@ EEG_filter_epoching(working_directory = data_file,
 #psd_n_jobs = 1
 #psd_average = 'mean'
 #psd_window = 'hamming'
+
+# Do you want to plot all linearity check plots? (Aka a LOT of plots)
+#plot_linearity_checks = False
 
 # I set all those values as default arguments, so can 
 # just pass the wd in the function call, but if you want 
