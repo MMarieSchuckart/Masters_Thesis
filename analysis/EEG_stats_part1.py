@@ -13,6 +13,19 @@ Version 1: 14.01.2022
 #%%
 
 #working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+#psd_tmin = 1
+#psd_tmax = 6 
+#psd_sfreq = 500 
+#psd_fmin = 4
+#psd_fmax = 35 
+#psd_n_fft = 500
+#psd_n_overlap = 100 
+#psd_n_per_seg = None 
+#psd_n_jobs = 1
+#psd_average = 'mean' 
+#psd_window = 'hamming'
+
+
 
 #%%
 
@@ -28,7 +41,8 @@ def EEG_stats_ttests(working_directory,
                      psd_n_per_seg = None, 
                      psd_n_jobs = 1, 
                      psd_average = 'mean', 
-                     psd_window = 'hamming'):
+                     psd_window = 'hamming',
+                     plot_linearity_checks = False):
     
     # I set default arguments, but they can be overwritten 
     # if you set different arguments in the function call.
@@ -343,7 +357,6 @@ def EEG_stats_ttests(working_directory,
                 # regression is the same as a linear regression)
                 lm = smf.ols(formula='power_value ~ feedback + sfc', data = df_freq_band).fit()
 
-                
                 """ 5.1.5 check assumptions of linear regression """
                 # Assumptions of OLS regressions:
                 # 1. Linearity of data
@@ -352,46 +365,55 @@ def EEG_stats_ttests(working_directory,
                 # 4. little or no multicollinearity of the residuals
                 # 5. little to no autocorrelation of the residuals
                 # 6. Homoscedasticity of the residuals
-                
-                # --> if assumptions are violated: Idk. Do it like everyone else, 
-                # ignore it and report it in the paper I guess?!
-                
-                # So print "assumption violated" if one of the assumptions is violated.
+                                
+                # Print "assumption violated" if one of the assumptions is violated.
                 # Don't know how to automate this for the visual checks though.
                 
-                # rank transform data if assumptions are violated
-                # we haven't detected any violation yet, so...
+                # Rank transform data if necessary.
+                # We haven't detected any violation yet, so...
                 rank_transform = False                       
                 
                 """ 5.1.5.1 Assumption 1: Linearity of data """
-                # You can only check this by visual inspection
-                # uncomment this section if you want to plot everything:
+                # You can only check this by visual inspection:
+                if plot_linearity_checks:    
                     
-                #fitted_vals = lm.predict()
-                #resids = lm.resid
+                    # predict some values using our regression model:
+                    fitted_vals = lm.predict()
+                    # get residuals
+                    resids = lm.resid
+                    
+                    # compute some reasonable axes limits (min and max value - and + a little extra space):    
+                    scale_plot_min = min(df_freq_band["power_value"]) - (np.std(df_freq_band["power_value"] / 3))
+                    scale_plot_max = max(df_freq_band["power_value"]) + (np.std(df_freq_band["power_value"] / 3))
 
-                #fig, ax = plt.subplots(1,2)
-    
-                #sns.regplot(x = fitted_vals, 
-                #            y = df_freq_band["power_value"], 
-                #            lowess = True, 
-                #            ax = ax[0], 
-                #            line_kws = {'color': 'red'})
-                #ax[0].set_title('Observed vs. Predicted Values', 
-                #                fontsize = 16)
-                #ax[0].set(xlabel = 'Predicted', 
-                #          ylabel = 'Observed')
+                    if scale_plot_min > (min(resids) - (np.std(resids) / 3)):
+                        scale_plot_min = min(resids) - (np.std(resids) / 3)
+                    if scale_plot_max < (max(resids) + (np.std(resids) / 3)):
+                        scale_plot_max = max(resids) + (np.std(resids) / 3)
 
-                #sns.regplot(x = fitted_vals, 
-                #            y = resids, 
-                #            lowess = True, 
-                #            ax = ax[1], 
-                #            line_kws = {'color': 'red'})
-                #ax[1].set_title('Residuals vs. Predicted Values', 
-                #                fontsize = 16)
-                #ax[1].set(xlabel = 'Predicted', 
-                #          ylabel = 'Residuals')
-                # Ah yes, this looks super weird. Nice.
+                    # plot predicted values vs actual values:
+
+                    fig, ax = plt.subplots(1,1)
+
+                    fig.suptitle("Linearity Check: \nIdeally, you should see a red diagonal line + a more or less matching underlying distribution! \nIf not: Assumption violated!", 
+                                 fontsize = 12,
+                                 color='red')
+                        
+                    sns.regplot(x = fitted_vals, 
+                                     y = df_freq_band["power_value"], 
+                                     lowess = True, 
+                                     line_kws = {'color': 'red'})
+                    ax.set_title('Observed vs. Predicted Values', 
+                                          fontsize = 10)
+                    ax.set(xlabel = 'Predicted', 
+                                    ylabel = 'Observed')
+                    ax.set(ylim = (scale_plot_min, scale_plot_max))
+                    ax.set(xlim = (scale_plot_min, scale_plot_max))
+
+                    # In the pilot dataset, this looks super weird. 
+                    # I hope the other datasets make more sense.
+
+                else: print("Careful, you didn't check assumption of linearity!\n\n\n")
                 
 
                 """ 5.1.5.2 Assumption 2: the groups follow a normal distribution """
@@ -430,7 +452,7 @@ def EEG_stats_ttests(working_directory,
                 if any(p <= 0.05 for p in p_values):
                     print("\n\nWARNING: \nParticipant " + participant + ", ROI: " + 
                           roi + ", Freq. Band: " + freq_band + 
-                          "\nAssumtion of normally distributed data \nin all groups is violated!\n\n")
+                          "\nAssumtion of normally distributed data \nin all groups is violated!\n\n\n")
                     rank_transform = True
                 
                 """ 5.1.5.3 Assumption 3: Mean of Residuals = 0 """
@@ -443,7 +465,7 @@ def EEG_stats_ttests(working_directory,
                     print("\n\nWARNING: \nParticipant " + participant + ", ROI: " + 
                           roi + ", Freq. Band: " + freq_band + 
                           "\nMean of Residuals is " + str(round(lm.resid.mean(), 3)) +
-                          ", so assumtion that mean of residuals = 0 is violated!\n\n")
+                          ", so assumtion that mean of residuals = 0 is violated!\n\n\n")
                     rank_transform = True
 
                 """ 5.1.5.4 Assumption 4: little to no multicollinearity of residuals """
@@ -459,16 +481,22 @@ def EEG_stats_ttests(working_directory,
                 X_constant = sm.add_constant(X)
                 # compute VIFs
                 vif = [variance_inflation_factor(X_constant.values, i) for i in range(X_constant.shape[1])]
-                #vif_df = pd.DataFrame({'vif': vif[1:]}, index = X.columns).T
-                
+            
                 # If no features are correlated, then all values for VIF will be 1.
-                # So print a warning if this is not the case.
-                if any(vif[1:]) != 1: 
+                # --> Print a warning if there are VIFs that are higher than 5.
+                if any(a >= 5 for a in vif[1:]): 
                     print("\n\nWARNING: \nParticipant " + participant + ", ROI: " + 
                           roi + ", Freq. Band: " + freq_band + 
-                          "\nAssumtion of no multicollinearity in the data is violated!\nYour predictors are correlated, try 'merging' them to 1 variable!\n\n")
-                    rank_transform = True
+                          "\nAssumtion of no multicollinearity in the data is violated!\nYour predictors are correlated!\n\n")
                     
+                    # check which predictor has a high VIF & exclude it from the regression
+                    vif_df = pd.DataFrame({'vif': vif[1:]}, index = X.columns).T
+                    if vif_df["feedback"][0] >= 5:
+                        print("Please consider removing feedback as predictor.\n\n\n")
+                    elif vif_df["sfc"][0] >= 5:
+                        print("Please consider removing sfc as predictor.\n\n\n")
+  
+
                 """ 5.1.5.5 Assumption 5: little to no autocorrelation of residuals """
                 # --> Durbin Watson Test
                 # If test statistic of Durbin Watson Test is outside a range 
@@ -478,7 +506,7 @@ def EEG_stats_ttests(working_directory,
                     print("\n\nWARNING: \n\nParticipant " + participant + ", ROI: " + 
                           roi + ", Freq. Band: " + freq_band + 
                           "\nDurbin Watson Test statistic is " + str(dw_test_stat) +
-                          ", assumtion of multicollinearity is violated!\n\nThere seems to be another independent variable that's systematically affecting your data!\n\n")
+                          ", assumption of multicollinearity is violated!\n\nThere seems to be another independent variable that's systematically affecting your data!\n\nPlease think about removing one of your predictors!\n\n\n")
                     
 
                 """ 5.1.5.6 Assumption 6: Homoscedasticity (equal variance) of residuals """
@@ -492,10 +520,11 @@ def EEG_stats_ttests(working_directory,
                 if round(gq_test["value"]["p-value"], 3) <= 0.05:
                     print("\n\nWARNING: \nParticipant " + participant + ", ROI: " + 
                           roi + ", Freq. Band: " + freq_band + 
-                          "\nHeteroscedasticity detected! Assumtion of homoscedasticity is violated!\n\n")
+                          "\nHeteroscedasticity detected! \n\nAssumtion of homoscedasticity is violated!\n\nRank-transforming the data!\n\n\n")
                     # For the record: I wanted to print this gif as an addition 
                     # to the hetero-warning-message: 
                     # https://giphy.com/gifs/queereye-queer-eye-6-queereye6-XCo9O0xRumy2F4iqLa
+                    # Anyway: Data should be rank transformed:
                     rank_transform = True
 
                 """ 5.1.6 get beta coefficients (model parameters) for feedback and sfc """
@@ -507,14 +536,23 @@ def EEG_stats_ttests(working_directory,
                     # fit model again with rank transformed data:
                     lm = smf.ols(formula='power_value ~ feedback + sfc', data = df_freq_band).fit()
                     
+                # Get regression coefficients (I think those are the beta coefficients?): 
                 # 1st parameter = intercept, 2nd param. = feedback, 3rd param. =  sfc
                 intercept, beta_feedback, beta_sfc = lm.params
-                                        
+
                 # beta coefficients indicate if there's a relationship between 
                 # dependent variable (power value) and independent variables (feedback & sfc) 
                 # If yes: beta ≠ 0, if no: beta = 0
+                # I think if you have multiple regressors, the beta coefficient 
+                # can be > (<) than 1 (-1)
                 
-                # append beta coefficients for current participant, channel & frequency to df
+                # I think in this case, the coefficient basically tells me how 
+                # much the power would have to change to match the Power in the next 
+                # Feedback or SFC level? Or something like that? 
+                # So for a sfc_beta = 75.433, the power should increase by 75.433 (V? mV? idk) 
+                # to match the power in the next sfc level. 
+                
+                # Anyway! Append beta coefficients for current participant, channel & frequency to df
                 tmp_df_betas.loc[0] = [participant, roi, freq_band, beta_feedback, beta_sfc]
                 beta_coeffs_res = beta_coeffs_res.append(tmp_df_betas) 
        
