@@ -10,8 +10,22 @@ Output:
 
 """
 #%%  
-
-#working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+# Settings for testing this script:
+    
+# working_directory = "/Users/merle/Desktop/Masterarbeit/Master_Testdaten/"
+# eeg_fir_design = "firwin"
+# eeg_window_type = "hamming" 
+# eeg_phase = "zero"
+# eeg_bandpass_fmin = 3 
+# eeg_bandpass_fmax = 36 
+# n_jobs = 1
+# ica_n_components = 15 
+# ica_max_iter = "auto" 
+# ica_random_state = 97
+# eeg_epochs_tmin = -1.5
+# eeg_epochs_tmax = 6
+# eeg_epochs_baseline_start = -1.5
+# eeg_epochs_baseline_stop = 0
 
 #%% 
 # create function to filter + epoch data automatically
