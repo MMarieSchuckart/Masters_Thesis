@@ -29,6 +29,9 @@ I found this solution here: https://github.com/xdf-modules/pyxdf
 (BTW: The internet says you should install PyPDF2 to be able to import pyxdf, 
 but that doesn't work.)
 
+Please also make sure that you have enough datasets or else the functions won't work.
+You need at least 4 datasets.
+
 """  
 
 #%%
@@ -108,39 +111,39 @@ eog_channels = ["EEG_031", "EEG_021",
         
 """ 4.2.2 Settings for Filtering: """ 
 # set filter type
-eeg_fir_design = 'firwin' 
+#eeg_fir_design = 'firwin' 
 # firwin is the default option; gives improved 
 # attenuation using fewer samples than “firwin2”
 
 # set type of window function
-eeg_window_type = 'hamming'    
+#eeg_window_type = 'hamming'    
 # zero phase filter
-eeg_phase = "zero"
+#eeg_phase = "zero"
 # highpass filter 
-eeg_bandpass_fmin = 3
+#eeg_bandpass_fmin = 3
 # lowpass filter 
-eeg_bandpass_fmax = 36
+#eeg_bandpass_fmax = 36
 # set number of runs to run in parallel
-n_jobs = 1
+#n_jobs = 1
 
 """ 4.2.3 ICA Settings """
 # ICA method is fastICA (= default)
 # use the first 15 components from the PCA 
 # (--> faster computation, no need to look at all 128 channels)
-ica_n_components = 15
+#ica_n_components = 15
 # only use every 5th sample from the data --> speed up computation
-ica_decim = 5 
-ica_max_iter = "auto" 
+#ica_decim = 5 
+#ica_max_iter = "auto" 
 # use a random seed to get the same results every time we run the ICA on the same data
-ica_random_state = 97 
+#ica_random_state = 97 
 
 """ 4.2.4 Settings for Epoching:"""
 # Epochs should be cut from -1.5 to +6 sec around trial onset
 # with baseline from -1.5 - 0
-eeg_epochs_tmin = -1.5
-eeg_epochs_tmax = 6
-eeg_epochs_baseline_start = -1.5
-eeg_epochs_baseline_stop = 0
+#eeg_epochs_tmin = -1.5
+#eeg_epochs_tmax = 6
+#eeg_epochs_baseline_start = -1.5
+#eeg_epochs_baseline_stop = 0
 
 # I set all those values as default arguments, so can 
 # just pass the wd in the function call, but if you want 
