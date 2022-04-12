@@ -1,4 +1,5 @@
 
+
 """ Stats script for Merle's Master's Thesis
 
 Stats part for GSS data
@@ -511,7 +512,7 @@ def GSS_stats(working_directory,
         # run Levene test, get p and test statistic   
     
         stat, p = levene(*tmp_list_dfs)
-    
+        
         # add to results df
         gss_results_df.loc[len(gss_results_df)] = ["Levene Test for Homogeneity of Variance", 
                                                    "all feedback levels", 
@@ -762,13 +763,10 @@ def GSS_stats(working_directory,
 #%% 
 
     """ 6. Create "I'm done!"-message: """
-    print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I saved the results for the\ngss data as 'gss_test_results.csv' in\nthe working directory. I also returned it\nas a new variable called 'gss_results_df'!\n\n- - - - - - - - - - - - - - - - - - - - - ")
+    print("\n\n- - - - - - - - - - - - - - - - - - - - - \n\nHey girl, I saved the results for the\ngss data as 'gss_test_results.csv' in\nthe working directory.\n\n- - - - - - - - - - - - - - - - - - - - - ")
 
           
-#%% 
-
-    """ 7. return gss_results_df as function output """
-    return(gss_results_df)
-
-
 # END OF FUNCTION             
+
+       
+        
