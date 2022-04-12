@@ -24,7 +24,7 @@ Version 1: 14.01.2022
 #psd_n_jobs = 1
 #psd_average = 'mean' 
 #psd_window = 'hamming'
-
+#plot_linearity_checks = False
 
 
 #%%
@@ -103,6 +103,9 @@ def EEG_stats_ttests(working_directory,
 
     # rank transform data
     from scipy.stats import rankdata
+    
+    # z-transform data
+    from scipy.stats import zscore
 
     # Shapiro-Wilk test function
     from scipy.stats import shapiro    
@@ -371,7 +374,9 @@ def EEG_stats_ttests(working_directory,
                 
                 # Rank transform data if necessary.
                 # We haven't detected any violation yet, so...
-                rank_transform = False                       
+                rank_transform = False     
+                # We also don't know if we need to rank transform the data, so...                  
+                z_transform = False
                 
                 """ 5.1.5.1 Assumption 1: Linearity of data """
                 # You can only check this by visual inspection:
@@ -465,8 +470,8 @@ def EEG_stats_ttests(working_directory,
                     print("\n\nWARNING: \nParticipant " + participant + ", ROI: " + 
                           roi + ", Freq. Band: " + freq_band + 
                           "\nMean of Residuals is " + str(round(lm.resid.mean(), 3)) +
-                          ", so assumtion that mean of residuals = 0 is violated!\n\n\n")
-                    rank_transform = True
+                          ", so assumtion that mean of residuals = 0 is violated!\n z-transforming data!\n\n\n")
+                    z_transform = True
 
                 """ 5.1.5.4 Assumption 4: little to no multicollinearity of residuals """
                 # The features should be linearly independent aka we should not be 
@@ -529,12 +534,17 @@ def EEG_stats_ttests(working_directory,
 
                 """ 5.1.6 get beta coefficients (model parameters) for feedback and sfc """
 
+                # z-transform data if necessary: 
+                if z_transform: 
+                    df_freq_band["power_value"] = zscore(df_freq_band["power_value"]).tolist()
+                
                 # rank transform data if necessary:
                 if rank_transform:
                     df_freq_band["power_value"] = rankdata(df_freq_band["power_value"], method='average').tolist()
 
-                    # fit model again with rank transformed data:
-                    lm = smf.ols(formula='power_value ~ feedback + sfc', data = df_freq_band).fit()
+                # fit model again:
+                lm = smf.ols(formula='power_value ~ feedback + sfc', data = df_freq_band).fit()
+                    
                     
                 # Get regression coefficients (I think those are the beta coefficients?): 
                 # 1st parameter = intercept, 2nd param. = feedback, 3rd param. =  sfc
@@ -556,7 +566,6 @@ def EEG_stats_ttests(working_directory,
                 tmp_df_betas.loc[0] = [participant, roi, freq_band, beta_feedback, beta_sfc]
                 beta_coeffs_res = beta_coeffs_res.append(tmp_df_betas) 
        
-
             
 #%%                                     
                
